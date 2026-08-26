@@ -6,3 +6,4 @@ export * from "./edge.js";
 export * from "./theme.js";
 export * from "./contrast.js";
 export * from "./css.js";
+export * from "./glass.js";

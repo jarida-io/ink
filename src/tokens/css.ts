@@ -15,11 +15,14 @@
 import type { InkTheme } from "./theme.js";
 import { cssBezier } from "./motion.js";
 import { WEB_FONT_STACKS } from "./type.js";
+import { glassSurface } from "./glass.js";
 
 /** `{ "--color-accent": "#7C3AED", ... }` — ordered, stable, alphabetical within group. */
 export function cssVariables(theme: InkTheme): Record<string, string> {
   const c = theme.color;
   const px = (n: number) => `${n}px`;
+  // Over anything, because a bar does not know what will scroll under it.
+  const glass = glassSurface(theme);
 
   const vars: Record<string, string> = {
     // Type
@@ -136,6 +139,13 @@ export function cssVariables(theme: InkTheme): Record<string, string> {
     // inline. Two curves genuinely exist; overwriting one with the other during
     // adoption would move every transition in the app to fix none of them.
     "--ink-ease": cssBezier(theme.easing),
+
+    // Glass. Derived, not chosen — see tokens/glass.ts.
+    "--ink-glass-bg": glass.background,
+    "--ink-glass-blur": `${glass.blur}px`,
+    "--ink-glass-saturate": String(glass.saturate),
+    "--ink-glass-rim": glass.rim,
+    "--ink-glass-rim-shade": glass.rimShade,
   };
 
   for (const [step, value] of Object.entries(theme.space)) {

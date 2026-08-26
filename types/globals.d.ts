@@ -11,3 +11,7 @@ declare const console: {
   error(...args: unknown[]): void;
   log(...args: unknown[]): void;
 };
+
+/** Timers. Present on every JavaScript host this library targets. */
+declare function setTimeout(handler: () => void, timeout?: number): number;
+declare function clearTimeout(handle: number): void;

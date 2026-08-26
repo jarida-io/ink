@@ -67,8 +67,9 @@ declare module "react-native" {
     transform?: Array<
       | { translateX: number | AnimatedInterpolation }
       | { translateY: number | AnimatedInterpolation }
+      | { rotateZ: string }
       | { scale: number | AnimatedInterpolation }
-      | { rotate: string }
+      | { rotate: string | AnimatedInterpolation }
       | { skewX: string }
       | { skewY: string }
     >;
@@ -77,12 +78,20 @@ declare module "react-native" {
   export interface ViewStyle extends FlexStyle, TransformsStyle {
     backgroundColor?: ColorValue;
     borderColor?: ColorValue;
+    borderTopColor?: ColorValue;
+    borderBottomColor?: ColorValue;
+    borderLeftColor?: ColorValue;
+    borderRightColor?: ColorValue;
     borderWidth?: number;
     borderTopWidth?: number;
     borderBottomWidth?: number;
     borderLeftWidth?: number;
     borderRightWidth?: number;
     borderRadius?: number;
+    borderTopLeftRadius?: number;
+    borderTopRightRadius?: number;
+    borderBottomLeftRadius?: number;
+    borderBottomRightRadius?: number;
     opacity?: number;
   }
 
@@ -116,6 +125,12 @@ declare module "react-native" {
     | "switch"
     | "radio"
     | "radiogroup"
+    | "checkbox"
+    | "combobox"
+    | "image"
+    | "list"
+    | "tab"
+    | "tablist"
     | "progressbar"
     | "alert"
     | "summary";
@@ -150,8 +165,10 @@ declare module "react-native" {
     style?: StyleProp<ViewStyle>;
     children?: ReactNode;
     pointerEvents?: "auto" | "none" | "box-none" | "box-only";
+    onLayout?: (event: LayoutChangeEvent) => void;
     testID?: string;
     ref?: Ref<unknown>;
+    [key: string]: unknown;
   }
 
   export interface TextProps extends AccessibilityProps {
@@ -177,7 +194,74 @@ declare module "react-native" {
     children?: ReactNode | ((state: PressableStateCallbackType) => ReactNode);
   }
 
+  export interface LayoutChangeEvent {
+    nativeEvent: { layout: { x: number; y: number; width: number; height: number } };
+  }
+
+  export interface TextInputProps extends AccessibilityProps {
+    value?: string;
+    onChangeText?: (text: string) => void;
+    placeholder?: string;
+    placeholderTextColor?: ColorValue;
+    editable?: boolean;
+    multiline?: boolean;
+    numberOfLines?: number;
+    keyboardType?: "default" | "email-address" | "numeric" | "url" | "web-search";
+    onFocus?: () => void;
+    onBlur?: () => void;
+    style?: StyleProp<TextStyle>;
+    testID?: string;
+  }
+
+  export interface ModalProps {
+    visible?: boolean;
+    transparent?: boolean;
+    animationType?: "none" | "slide" | "fade";
+    onRequestClose?: () => void;
+    children?: ReactNode;
+  }
+
+  export interface ScrollViewProps extends ViewProps {
+    horizontal?: boolean;
+    showsHorizontalScrollIndicator?: boolean;
+    showsVerticalScrollIndicator?: boolean;
+    contentContainerStyle?: StyleProp<ViewStyle>;
+  }
+
+  export interface ImageProps {
+    source: { uri: string } | number;
+    style?: StyleProp<ViewStyle>;
+    accessibilityLabel?: string;
+  }
+
   export const View: ComponentType<ViewProps>;
+  export const TextInput: ComponentType<TextInputProps>;
+  export const Modal: ComponentType<ModalProps>;
+  export const ScrollView: ComponentType<ScrollViewProps>;
+  export const Image: ComponentType<ImageProps>;
+
+  export interface PanResponderGestureState {
+    dx: number;
+    dy: number;
+    moveX: number;
+    moveY: number;
+    vx: number;
+    vy: number;
+  }
+
+  export interface GestureResponderEvent {
+    nativeEvent: { locationX: number; locationY: number; pageX: number; pageY: number };
+  }
+
+  export const PanResponder: {
+    create(config: {
+      onStartShouldSetPanResponder?: () => boolean;
+      onMoveShouldSetPanResponder?: () => boolean;
+      onPanResponderGrant?: (e: GestureResponderEvent, g: PanResponderGestureState) => void;
+      onPanResponderMove?: (e: GestureResponderEvent, g: PanResponderGestureState) => void;
+      onPanResponderRelease?: (e: GestureResponderEvent, g: PanResponderGestureState) => void;
+    }): { panHandlers: Record<string, unknown> };
+  };
   export const Text: ComponentType<TextProps>;
   export const Pressable: ComponentType<PressableProps>;
 
@@ -227,17 +311,21 @@ declare module "react-native" {
         useNativeDriver: boolean;
       },
     ): AnimatedComposite;
+    loop(animation: AnimatedComposite, config?: { iterations?: number }): AnimatedComposite;
   };
 
   export const Easing: {
     bezier(x1: number, y1: number, x2: number, y2: number): (value: number) => number;
     linear: (value: number) => number;
+    ease: (value: number) => number;
+    inOut(easing: (value: number) => number): (value: number) => number;
   };
 
   export const AccessibilityInfo: {
     isReduceMotionEnabled(): Promise<boolean>;
+    isReduceTransparencyEnabled(): Promise<boolean>;
     addEventListener(
-      type: "reduceMotionChanged",
+      type: "reduceMotionChanged" | "reduceTransparencyChanged",
       handler: (enabled: boolean) => void,
     ): { remove(): void };
   };

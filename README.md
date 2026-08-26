@@ -51,10 +51,13 @@ import { InkProvider, InkCard, InkTitle } from "@jarida/ink/web";
 </InkProvider>;
 ```
 
-`InkProvider` writes the tokens as CSS custom properties. Pass `scoped={false}` to write them to
-`<html>` instead — that is the mode that lets an existing product adopt the library without
-touching a stylesheet, because the names emitted are the names its CSS already reads
-(`--color-accent`, `--shadow-ink`, `--space-4`, `--tap-min`, and about sixty more).
+`InkProvider` writes the tokens as CSS custom properties, in one of three modes:
+
+| `mode` | Writes to | For |
+|---|---|---|
+| `"scoped"` (default) | a wrapper element | An app with its own tokens, or two themes on one page |
+| `"global"` | `<html>` | Adopting the library without touching a stylesheet — the names emitted are the names its CSS already reads (`--color-accent`, `--shadow-ink`, `--space-4`, `--tap-min`, and about sixty more) |
+| `"context"` | nothing | A product that already applies the tokens itself, before React renders, and needs the provider only so components can read the theme |
 
 ### Expo
 

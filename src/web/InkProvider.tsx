@@ -1,14 +1,19 @@
 /**
  * The theme, and the custom properties every rule in `ink.css` reads.
  *
- * Two modes, because the two things a host wants are different:
+ * Three modes, because the three things a host wants are genuinely different:
  *
- * - **scoped** (default) writes the variables onto a wrapper element. Safe in
- *   an app that already has its own tokens, and lets two themes coexist on one
- *   page — a dark preview inside a light settings screen, say.
- * - **global** writes them onto `<html>`. This is the mode that lets an
+ * - **`"scoped"`** (default) writes the variables onto a wrapper element. Safe
+ *   in an app that already has its own tokens, and it lets two themes coexist
+ *   on one page — a dark preview inside a light settings screen, say.
+ * - **`"global"`** writes them onto `<html>`. This is the mode that lets an
  *   existing product adopt the library without touching a stylesheet: the names
  *   emitted are the names its CSS already reads.
+ * - **`"context"`** writes nothing. For a product that already applies the
+ *   tokens itself — from its own theme store, before React renders, so there is
+ *   no flash — and needs this provider only so Ink components can read the
+ *   theme. Pass the same theme object the host wrote from; two writers of the
+ *   same custom properties is how they drift.
  */
 import {
   createContext,
@@ -24,11 +29,13 @@ import { cssVariables } from "../tokens/css.js";
 
 const ThemeContext = createContext<InkTheme | null>(null);
 
+export type InkProviderMode = "scoped" | "global" | "context";
+
 export interface InkProviderProps extends InkThemeOptions {
   /** Supply a whole theme instead of options, if you build one elsewhere. */
   theme?: InkTheme;
-  /** False writes the variables to `<html>` rather than a wrapper. */
-  scoped?: boolean;
+  /** Where the custom properties go, or whether they are written at all. */
+  mode?: InkProviderMode;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -64,7 +71,7 @@ export function usePrefersReducedMotion(): boolean {
 
 export function InkProvider({
   theme,
-  scoped = true,
+  mode = "scoped",
   className,
   style,
   children,
@@ -81,7 +88,7 @@ export function InkProvider({
   const vars = useMemo(() => cssVariables(resolved), [resolved]);
 
   useEffect(() => {
-    if (scoped || typeof document === "undefined") return;
+    if (mode !== "global" || typeof document === "undefined") return;
     const root = document.documentElement;
     for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value);
     root.dataset.theme = resolved.scheme;
@@ -89,9 +96,9 @@ export function InkProvider({
     return () => {
       for (const name of Object.keys(vars)) root.style.removeProperty(name);
     };
-  }, [scoped, vars, resolved.scheme, resolved.density]);
+  }, [mode, vars, resolved.scheme, resolved.density]);
 
-  const body = scoped ? (
+  const body = mode === "scoped" ? (
     <div
       className={["ink", className].filter(Boolean).join(" ")}
       data-theme={resolved.scheme}

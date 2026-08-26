@@ -79,7 +79,23 @@ export function createTheme(options: InkThemeOptions = {}): InkTheme {
   const accent = options.accent ?? "Purple";
   const base: InkPalette = scheme === "dark" ? DARK : LIGHT;
   const ramp = scheme === "dark" ? ACCENTS_DARK[accent] : ACCENTS[accent];
-  const line = readable(ramp[0], grounds(base), "nonText");
+  // The line clears the **text** floor, not the 3:1 WCAG asks of a UI boundary.
+  //
+  // Deriving to 3:1 exactly is what the first version of this did, and it threw
+  // away a judgment the product had already made and written down: the shipped
+  // dark theme lifts its focus ring off the accent with the note "#7C3AED on
+  // the dark sidebar measures ~3.1:1, which passes but reads faint". Landing on
+  // 3.00 reproduced precisely the faintness that comment was complaining about.
+  //
+  // DESIGN.md gives the reason it matters more here than in most products:
+  // important UI lines have to stay visible on a dimmed 800x480 panel read from
+  // across a room, which is also why the edge is 2px rather than a hairline. A
+  // boundary that only just clears the minimum on a bright monitor is a
+  // boundary that is gone on that screen.
+  //
+  // Purple in light measures 5.18:1 on the warm sidebar and is returned
+  // untouched, so the default theme is unchanged.
+  const line = readable(ramp[0], grounds(base), "text");
 
   return {
     scheme,

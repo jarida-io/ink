@@ -26,6 +26,18 @@ describe("the provider", () => {
     expect(scope.dataset.theme).toBe("light");
   });
 
+  it("writes nothing at all in context mode", () => {
+    // For a host that already applied the tokens itself. Two writers of the
+    // same custom properties is how they drift.
+    const { container } = render(
+      <InkProvider mode="context">
+        <span>ready</span>
+      </InkProvider>,
+    );
+    expect(container.querySelector(".ink")).toBeNull();
+    expect(document.documentElement.style.getPropertyValue("--color-accent")).toBe("");
+  });
+
   it("renders without one, rather than crashing a host that forgot", () => {
     // A component library that takes an application down to enforce its own
     // setup step has chosen the wrong failure.

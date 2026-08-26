@@ -117,8 +117,10 @@ describe("every accent a household can pick", () => {
     for (const name of Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]) {
       const theme = createTheme({ accent: name });
       for (const ground of grounds(theme.color)) {
+        // The text floor, not the 3:1 for a boundary. A line that only just
+        // clears the minimum is gone on a dimmed panel read from across a room.
         expect(
-          passes(theme.color.accentLine, ground, "nonText"),
+          passes(theme.color.accentLine, ground, "text"),
           `${name} as a line on ${ground}`,
         ).toBe(true);
       }
@@ -170,7 +172,7 @@ describe("every accent a household can pick", () => {
           expect(
             contrast(theme.color.focus, ground),
             `${name} ring in ${scheme} on ${ground}`,
-          ).toBeGreaterThanOrEqual(AA.nonText);
+          ).toBeGreaterThanOrEqual(AA.text);
         }
       }
     }
