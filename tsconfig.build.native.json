@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    // React Native's own types replace the local stand-in once the consumer
+    // has it installed, so the emitted declarations must not reference the
+    // shim. `skipLibCheck` keeps the shim from being validated during emit.
+    "lib": ["ES2020"],
+    "paths": {
+      "react-native": ["./types/react-native.d.ts"]
+    }
+  },
+  "include": ["src/native", "src/tokens", "src/core", "types"],
+  // `exclude` is inherited, and the base build excludes `src/native` — so
+  // without this the native build succeeds and emits nothing at all.
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}

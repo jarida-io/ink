@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # Three type-checks, not one. The library, its tests, and — separately —
+      # the native renderer, which compiles WITHOUT DOM types on purpose: a
+      # `window` or a `document` reaching `src/core` or `src/native` has to fail
+      # here rather than on a device.
+      - run: npm run typecheck
+      - run: npm run typecheck:native
+
+      - run: npm test
+
+      # The published shape has to actually emit. A library whose build is only
+      # ever run by `npm publish` discovers its emit errors in front of everyone.
+      - run: npm run build

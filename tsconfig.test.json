@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // The tests read the product's stylesheet off disk to check the library
+    // against it, so they — and only they — get Node.
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["src/native"]
+}

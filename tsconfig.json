@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    // Empty on purpose. The library must not pick up ambient Node types: a
+    // `process` or a `require` that compiles here would fail on a device.
+    "types": []
+  },
+  "include": ["src/tokens", "src/core", "src/web", "src/index.ts"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}

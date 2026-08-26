@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // The published shape: ES modules plus declarations, no bundler.
+    //
+    // A design library has no business bundling. Every consumer already runs
+    // one — Vite, Metro, Next, webpack — and each wants to tree-shake, alias
+    // and transform the source its own way. Shipping ESM with types lets them,
+    // and it is also the only build this package can do without taking on a
+    // dependency it would then have to keep alive.
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    // Emit needs real extensions in the output, so the source-only convenience
+    // of importing `.ts` paths is off here.
+    "allowImportingTsExtensions": false,
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "src/native"]
+}

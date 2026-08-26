@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // No DOM. A `window` or a `document` reaching `src/core` or `src/native` is
+    // then a build failure here rather than a crash on a device.
+    "lib": ["ES2020"],
+    "paths": {
+      "react-native": ["./types/react-native.d.ts"]
+    }
+  },
+  "include": ["src/tokens", "src/core", "src/native", "types"]
+}

@@ -1,0 +1,8 @@
+# `node_modules` without a trailing slash on purpose: during sibling-checkout
+# development it is a SYMLINK to the consuming app's install, and `node_modules/`
+# does not match a symlink — git tracked the link itself.
+node_modules
+dist/
+*.tsbuildinfo
+.DS_Store
+*.log
