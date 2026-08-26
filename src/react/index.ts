@@ -49,4 +49,4 @@ export { InkInput, InkTextArea, InkSelect, InkCheckbox, InkSlider } from "./form
 export type { InkInputProps, InkSelectOption } from "./forms.js";
 export { InkDialog, InkSheet } from "./overlays.js";
 export type { InkDialogProps } from "./overlays.js";
-export { InkBudget, useInkBudget } from "../core/budget.js";
+export { InkBudget, useInkBudget } from "../shared/budget.js";

@@ -17,6 +17,6 @@
     // `process` or a `require` that compiles here would fail on a device.
     "types": []
   },
-  "include": ["src/tokens", "src/core", "src/web", "src/index.ts"],
+  "include": ["src/tokens", "src/core", "src/shared", "src/react", "src/headless", "src/index.ts"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }

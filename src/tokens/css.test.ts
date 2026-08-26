@@ -6,17 +6,11 @@ import { ACCENTS } from "./color.js";
 /**
  * The emitter, on its own terms.
  *
- * The test that mattered most here used to live in this file: it parsed
- * `pond-desktop/src/styles/design-tokens.css` and asserted the library
- * reproduced it exactly. That test moved to the product when this package moved
- * out of it, and the move was the right way round rather than a concession.
- *
- * A published library cannot assert that it matches one consumer's stylesheet —
- * it has no idea the consumer exists, and a copy of their file vendored here
- * would be a snapshot that rots from the day it is taken. The obligation runs
- * the other way: a product that adopts these tokens owes itself a test that it
- * has not drifted, and it is the only side of the relationship that can see
- * both halves. See `pond-desktop/src/ink-adoption.test.ts`.
+ * A published library cannot assert that it matches a consumer's stylesheet —
+ * it has no idea the consumer exists, and a vendored copy of their file would
+ * be a snapshot that rots from the day it is taken. The obligation runs the
+ * other way: an application adopting these tokens owes itself a drift test, and
+ * it is the only side that can see both halves.
  *
  * What stays here is what this package can be held to alone.
  */

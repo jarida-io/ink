@@ -2,7 +2,7 @@
  * The surfaces that carry the edge — and the budget that keeps them rare.
  */
 import type { ReactNode } from "react";
-import { useEdgeBudget } from "../core/budget.js";
+import { useEdgeBudget } from "../shared/budget.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { InkBudget } from "../core/budget.js";
+import { InkBudget } from "../shared/budget.js";
 import { configureInk, resetWarnings } from "../core/env.js";
 import { InkProvider } from "./InkProvider.js";
 import { InkBadge, InkMeter, InkNotice, InkTitle } from "./primitives.js";
@@ -232,24 +232,24 @@ describe("segmented", () => {
 
 describe("the readouts say what they know", () => {
   it("reports a percentage when there is one", () => {
-    render(<InkMeter value={0.42} label="Downloading Bella" />);
-    const bar = screen.getByRole("progressbar", { name: "Downloading Bella" });
+    render(<InkMeter value={0.42} label="Downloading" />);
+    const bar = screen.getByRole("progressbar", { name: "Downloading" });
     expect(bar.getAttribute("aria-valuenow")).toBe("42");
   });
 
   it("claims nothing before a total is known", () => {
     // Before the server has reported a size there is no honest percentage, so
     // the bar paces rather than inventing one.
-    render(<InkMeter label="Downloading Bella" />);
+    render(<InkMeter label="Downloading" />);
     const bar = screen.getByRole("progressbar");
     expect(bar.getAttribute("aria-valuenow")).toBeNull();
     expect(bar.querySelector("[data-indeterminate]")).not.toBeNull();
   });
 
   it("announces a failure and waits with everything else", () => {
-    const { rerender } = render(<InkNotice tone="danger">Kokoro could not start</InkNotice>);
+    const { rerender } = render(<InkNotice tone="danger">The export could not finish</InkNotice>);
     expect(screen.getByRole("alert")).toBeTruthy();
-    rerender(<InkNotice tone="success">Bella is ready</InkNotice>);
+    rerender(<InkNotice tone="success">Export finished</InkNotice>);
     expect(screen.getByRole("status")).toBeTruthy();
   });
 });
@@ -280,14 +280,14 @@ describe("the surfaces", () => {
   it("gives a group one heading and one edge, however many rows it holds", () => {
     render(
       <InkGroup title="Speaking">
-        <InkRow label="Voice" description="Who the pond sounds like">
+        <InkRow label="Voice" description="Who the assistant sounds like">
           <InkButton>Change</InkButton>
         </InkRow>
         <InkRow label="Pace" description="How fast it talks" />
       </InkGroup>,
     );
     expect(screen.getAllByRole("heading")).toHaveLength(1);
-    expect(screen.getByText("Who the pond sounds like")).toBeTruthy();
+    expect(screen.getByText("Who the assistant sounds like")).toBeTruthy();
   });
 
   it("sets a screen title as a heading, italic and all", () => {

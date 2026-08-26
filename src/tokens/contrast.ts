@@ -1,11 +1,10 @@
 /**
  * The measurement, shipped with the values.
  *
- * DESIGN.md's rule is that every colour carries its measurement — "a token that
- * moved says what it measured and why, in the comment, with the ratio." A
- * comment is a promise nothing checks. This module is the same promise as an
- * assertion, so a hex that moves fails a test instead of quietly failing a
- * person.
+ * Every colour should carry its measurement. But a comment saying "4.6:1 on
+ * white" is a promise nothing checks, and it goes stale the first time the hex
+ * moves. This module is the same promise as an assertion, so a value that
+ * drifts fails a test instead of quietly failing a person.
  *
  * WCAG 2.1 relative luminance and contrast ratio, no dependencies.
  */
@@ -129,7 +128,7 @@ export function passes(
  * Throw with the number rather than a boolean.
  *
  * Used by the token tests, and available to a product that wants to guard a
- * colour it computes at runtime — an accent a household picked, say, which no
+ * colour it computes at runtime — an accent the user picked, say, which no
  * test in this repository can see.
  */
 export function assertContrast(
@@ -174,7 +173,7 @@ function toHex({ r, g, b }: Pick<Rgb, "r" | "g" | "b">): string {
  * This exists because of a defect the shipped system still has. `--focus-ring`
  * was split out of `--color-border-focus` precisely because the old ring
  * measured 2.06:1, under the 3:1 WCAG requires of a focus indicator — and then
- * the replacement was measured for purple only. A household that picks Coral
+ * the replacement was measured for purple only. An app whose user picks Coral
  * gets a ring at **2.69:1 on Jarida White**, which is the same defect wearing a
  * different hue. Teal at 3.60:1 is a legitimate ring and an illegal sentence.
  *
@@ -236,14 +235,13 @@ export function readable(
 /**
  * Whichever candidate reads best on a ground.
  *
- * The third of the same family of defects. `--color-text-on-accent` is a flat
- * `#FFFFFF`, which is right for Purple (5.70:1) and wrong for Coral: white on
- * `#F97316` measures **2.80:1**, so the primary button on a Coral pond — the
- * one control on the screen that is actually asking a question — has a label
- * nobody can read. Charcoal on the same orange is 6.44:1.
+ * The third of the same family of defects. A flat `#FFFFFF` for text-on-accent
+ * is right for Purple (5.70:1) and wrong for Coral: white on `#F97316` measures
+ * **2.80:1**, so a filled primary button has a label nobody can read. Charcoal
+ * on the same orange is 6.44:1.
  *
- * The accent itself cannot move; it is what the household chose. What can move
- * is what sits on top of it, and there are only ever two sensible candidates.
+ * The accent itself cannot move; it is what the user chose. What can move is
+ * what sits on top of it, and there are only ever two sensible candidates.
  */
 export function bestOn(candidates: string[], ground: string): string {
   if (candidates.length === 0) throw new Error("ink: bestOn() needs a candidate");

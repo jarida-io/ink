@@ -20,20 +20,59 @@ describe("navbar", () => {
     expect(bar.className).not.toContain("ink-edge");
   });
 
-  it("fails toward legible when the observer never reports", () => {
-    // The bar starts with the material on and the observer turns it off. Any
-    // environment where the observer is stubbed or throttled — this test's, an
-    // old engine's — gets a readable bar rather than a transparent one sitting
-    // over content that is already scrolling under it.
+  it("starts whole, so a bar with no scroll signal is still navigable", () => {
     render(<InkNavbar title="Settings" />);
-    expect(screen.getByRole("banner").dataset.scrolled).toBe("true");
+    const bar = screen.getByRole("banner");
+    expect(bar.dataset.stage).toBe("expanded");
+    // Expanded carries no material, which is right at the top of a page.
+    expect(bar.dataset.material).toBe("false");
   });
 
-  it("lets the caller drive the scrolled state, which is how native does it", () => {
-    const { rerender } = render(<InkNavbar title="Settings" scrolled={false} />);
-    expect(screen.getByRole("banner").dataset.scrolled).toBe("false");
-    rerender(<InkNavbar title="Settings" scrolled />);
-    expect(screen.getByRole("banner").dataset.scrolled).toBe("true");
+  it("lets the caller drive the stage, which is how native does it", () => {
+    const { rerender } = render(<InkNavbar title="Settings" stage="condensed" />);
+    expect(screen.getByRole("banner").dataset.stage).toBe("condensed");
+    expect(screen.getByRole("banner").dataset.material).toBe("true");
+    rerender(<InkNavbar title="Settings" stage="collapsed" />);
+    expect(screen.getByRole("banner").dataset.stage).toBe("collapsed");
+  });
+
+  it("drops secondary actions when it condenses, and all of them when it collapses", () => {
+    const actions = [
+      { key: "search", label: "Search" },
+      { key: "add", label: "New", primary: true },
+    ];
+    const { rerender } = render(<InkNavbar title="Chat" actions={actions} stage="expanded" />);
+    expect(screen.getByRole("button", { name: "Search" })).toBeTruthy();
+
+    rerender(<InkNavbar title="Chat" actions={actions} stage="condensed" />);
+    expect(screen.queryByRole("button", { name: "Search" })).toBeNull();
+    expect(screen.getByRole("button", { name: "New" })).toBeTruthy();
+
+    rerender(<InkNavbar title="Chat" actions={actions} collapse stage="collapsed" />);
+    expect(screen.queryByRole("button", { name: "New" })).toBeNull();
+  });
+
+  it("expands on the puck rather than firing the action underneath it", () => {
+    // The reader collapsed the bar by scrolling, not by choosing to. The first
+    // press is them asking to see their options, not agreeing to one.
+    const onPress = vi.fn();
+    render(
+      <InkNavbar
+        title="Chat"
+        collapse
+        stage="collapsed"
+        actions={[{ key: "add", label: "New", primary: true, onPress }]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show navigation" }));
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it("takes the collapsed puck out of the tab order while the bar is whole", () => {
+    const { rerender } = render(<InkNavbar title="Chat" collapse stage="expanded" />);
+    expect(screen.getByRole("button", { name: "Show navigation" }).tabIndex).toBe(-1);
+    rerender(<InkNavbar title="Chat" collapse stage="collapsed" />);
+    expect(screen.getByRole("button", { name: "Show navigation" }).tabIndex).toBe(0);
   });
 
   it("names the screen as a heading", () => {
@@ -89,7 +128,7 @@ describe("breadcrumb", () => {
       <InkBreadcrumb
         max={4}
         items={[
-          { label: "Pond" },
+          { label: "Home" },
           { label: "Settings" },
           { label: "Voice" },
           { label: "Quality" },
@@ -97,14 +136,14 @@ describe("breadcrumb", () => {
         ]}
       />,
     );
-    expect(screen.getByText("Pond")).toBeTruthy();
+    expect(screen.getByText("Home")).toBeTruthy();
     expect(screen.getByText("Balanced")).toBeTruthy();
     expect(screen.getByLabelText("Skipped levels")).toBeTruthy();
     expect(screen.queryByText("Settings")).toBeNull();
   });
 
   it("marks the last crumb as the current page", () => {
-    render(<InkBreadcrumb items={[{ label: "Pond" }, { label: "Voice" }]} />);
+    render(<InkBreadcrumb items={[{ label: "Home" }, { label: "Voice" }]} />);
     expect(screen.getByText("Voice").getAttribute("aria-current")).toBe("page");
   });
 });
@@ -155,7 +194,7 @@ describe("the waiting states", () => {
     // Four seconds is generous for "Saved" and nowhere near enough for a
     // sentence explaining what failed.
     expect(readingTime("Saved")).toBeLessThan(readingTime(
-      "Kokoro could not start because q8f16 returns silence on this board, so the pond is running q4f16 instead.",
+      "The export could not finish because the destination folder is read-only, so nothing was written.",
     ));
     expect(readingTime("Saved")).toBeGreaterThanOrEqual(3000);
   });

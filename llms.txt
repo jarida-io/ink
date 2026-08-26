@@ -1,0 +1,31 @@
+# Ink
+
+> A design library with a printed edge and a glass bar. Framework-agnostic tokens
+> and behaviour, React and React Native bindings, and plain CSS for everything
+> else. Zero runtime dependencies.
+
+Ink separates what a component *decides* from what it *looks like*. Tokens,
+geometry, WCAG maths and behaviour state machines have no framework in them and
+run anywhere; the React and React Native packages are thin renderers over that
+shared core, and the stylesheet drives any framework with no JavaScript at all.
+
+Two things distinguish it: the **ink edge** is modelled as a static plate behind
+a moving face rather than an animated shadow, which is what makes it drawable on
+React Native; and every contrast-sensitive colour is **derived from a measured
+floor** rather than chosen, including the glass tint, so a runtime-selected
+accent cannot produce an unreadable control.
+
+## Docs
+
+- [Agent reference](docs/AGENTS.md): complete API, rules and import paths, written for coding agents
+- [README](README.md): human-facing overview and getting started
+- [Inventory](docs/INVENTORY.md): every element, and what is deliberately absent
+- [Glass](docs/GLASS.md): the derived-tint material and the navbar's behaviour
+
+## Entry points
+
+- `@jarida/ink` — tokens, geometry, contrast, headless behaviour. No dependencies.
+- `@jarida/ink/headless` — navbar / roving focus / toast / slider state machines
+- `@jarida/ink/css` — the stylesheet, usable from any framework
+- `@jarida/ink/react` — React DOM components
+- `@jarida/ink/native` — React Native / Expo components

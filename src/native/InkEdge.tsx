@@ -41,7 +41,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, View, type StyleProp, type ViewStyle } from "react-native";
 import { plateRadius, resolveEdge } from "../core/edge.js";
-import { useEdgeBudget } from "../core/budget.js";
+import { useEdgeBudget } from "../shared/budget.js";
 import type { InkEdgeTokens, InkState } from "../tokens/edge.js";
 import { useInkTheme } from "./InkProvider.js";
 

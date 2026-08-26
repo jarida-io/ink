@@ -1,16 +1,18 @@
 {
   "name": "@jarida/ink",
   "version": "1.0.0",
-  "description": "The ink edge, as a design library. Tokens and components for React and React Native / Expo.",
+  "description": "A design library with a printed edge and a glass bar. Framework-agnostic tokens and behaviour, React and React Native bindings, and plain CSS for everything else.",
   "keywords": [
     "design-system",
+    "design-tokens",
+    "headless-ui",
     "react",
     "react-native",
     "expo",
-    "design-tokens",
+    "css",
     "accessibility",
     "wcag",
-    "jarida"
+    "framework-agnostic"
   ],
   "license": "Apache-2.0",
   "author": "Jerry Ochieng Anyumba",
@@ -31,14 +33,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./web": {
-      "types": "./dist/web/index.d.ts",
-      "default": "./dist/web/index.js"
-    },
-    "./native": {
-      "types": "./dist/native/index.d.ts",
-      "default": "./dist/native/index.js"
-    },
     "./tokens": {
       "types": "./dist/tokens/index.d.ts",
       "default": "./dist/tokens/index.js"
@@ -47,7 +41,20 @@
       "types": "./dist/core/index.d.ts",
       "default": "./dist/core/index.js"
     },
-    "./web/ink.css": "./dist/web/ink.css",
+    "./headless": {
+      "types": "./dist/headless/index.d.ts",
+      "default": "./dist/headless/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./native": {
+      "types": "./dist/native/index.d.ts",
+      "default": "./dist/native/index.js"
+    },
+    "./css": "./dist/css/ink.css",
+    "./ink.css": "./dist/css/ink.css",
     "./vite-alias": "./vite-alias.ts",
     "./package.json": "./package.json"
   },
@@ -63,7 +70,7 @@
     "build": "npm run build:web && npm run build:native && npm run build:css",
     "build:web": "tsc -p tsconfig.build.json",
     "build:native": "tsc -p tsconfig.build.native.json",
-    "build:css": "cp src/web/ink.css dist/web/ink.css",
+    "build:css": "mkdir -p dist/css && cp src/css/ink.css dist/css/ink.css",
     "clean": "rm -rf dist",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "typecheck:native": "tsc -p tsconfig.native.json",

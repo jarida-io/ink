@@ -23,11 +23,12 @@ export function inkAlias(packageRoot: string): AliasEntry[] {
   const src = `${packageRoot.replace(/\/$/, "")}/src`;
   return [
     { find: /^@jarida\/ink$/, replacement: `${src}/index.ts` },
-    { find: /^@jarida\/ink\/web$/, replacement: `${src}/web/index.ts` },
+    { find: /^@jarida\/ink\/react$/, replacement: `${src}/react/index.ts` },
     { find: /^@jarida\/ink\/native$/, replacement: `${src}/native/index.ts` },
+    { find: /^@jarida\/ink\/headless$/, replacement: `${src}/headless/index.ts` },
     { find: /^@jarida\/ink\/tokens$/, replacement: `${src}/tokens/index.ts` },
     { find: /^@jarida\/ink\/core$/, replacement: `${src}/core/index.ts` },
-    // Everything else is a file path, `@jarida/ink/web/ink.css` above all.
+    { find: /^@jarida\/ink\/(?:css|ink\.css)$/, replacement: `${src}/css/ink.css` },
     { find: /^@jarida\/ink\/(.*)$/, replacement: `${src}/$1` },
   ];
 }

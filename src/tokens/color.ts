@@ -1,11 +1,9 @@
 /**
  * Colour, and the measurement that justified it.
  *
- * Ported from `pond-desktop/src/styles/design-tokens.css`, which DESIGN.md
- * names as the authority when the shipped system and the brand deck disagree.
- * Every value that carries a contrast argument keeps the argument, because the
- * rule is "every colour carries its measurement" and a value without its
- * reasoning is the thing the next person quietly changes.
+ * Every value that carries a contrast argument keeps the argument. A colour
+ * without its reasoning is the one the next person quietly changes, and the
+ * reasoning is almost always a measurement rather than a preference.
  *
  * Ratios below are measured against `light.bg` (#FFF9F9) unless stated, and
  * are re-asserted by `contrast.test.ts` — so if a hex moves, the test tells you
@@ -28,14 +26,13 @@ export const PURPLE = {
 } as const;
 
 /**
- * The five accents a household can choose between.
+ * The five accents an application can offer.
  *
  * Each is `[base, pressed, soft, softer]`. Note that `Purple.base` is
  * **#7C3AED, not #8C4BFF** — the mark colour and the running UI accent are
- * different values, and the app has always shipped the darker one. It measures
- * 5.47:1 on Jarida White against the mark's 4.42:1, which is why the accent can
- * carry a word and the mark cannot. Keep them distinct; collapsing them either
- * dulls the logo or fails the text.
+ * different values on purpose. The accent measures 5.47:1 on the light ground
+ * against the mark's 4.42:1, which is why the accent can carry a word and the
+ * mark cannot. Collapsing them either dulls the mark or fails the text.
  */
 export const ACCENTS = {
   Purple: ["#7C3AED", "#6D28D9", "#EDE9FE", "#F5F3FF"],
@@ -74,16 +71,35 @@ export const GREY = {
 } as const;
 
 /**
+ * The same ramp, inverted, so `grey-50` is the darkest step in both schemes.
+ *
+ * Inverting rather than re-picking keeps one mental model: a higher number is
+ * always further from the page, whichever way the page is going.
+ */
+export const DARK_GREY = {
+  50: "#18181B",
+  100: "#27272A",
+  200: "#3F3F46",
+  300: "#52525B",
+  400: "#71717A",
+  500: "#A1A1AA",
+  600: "#D4D4D8",
+  700: "#E4E4E7",
+  800: "#F4F4F5",
+  900: "#FAFAFA",
+} as const;
+
+/**
  * The palette a surface actually reads from.
  *
  * Deliberately flat and fully resolved: no `var()` chains, no `color-mix`, no
- * alpha-over-unknown. React Native has none of those, and the places this
- * system has previously failed accessibility were all alpha composited over a
- * background nobody had checked (`text.secondary` was slate-400 at 2.6:1).
- * A palette of solid values is a palette you can measure.
+ * alpha-over-unknown. React Native supports none of those, and every
+ * accessibility failure this palette has had came from an alpha value
+ * composited over a background nobody had checked. A palette of solid values
+ * is a palette you can measure.
  */
 export interface InkPalette {
-  /** The ground. Warm, never neutral. */
+  /** The page. Warm rather than pure white, which is a choice you can change. */
   bg: string;
   /** Card faces, inputs, anything holding content. */
   surface: string;
@@ -111,7 +127,7 @@ export interface InkPalette {
    * The accent when it is a line rather than a fill.
    *
    * The accent has three jobs and only one of them can be the raw brand value.
-   * As a **fill** it is whatever the household chose, and what matters is the
+   * As a **fill** it is whatever the user chose, and what matters is the
    * label on top of it. As a **line** — a hovered card border, a selected rule,
    * a focus ring — it has to clear 3:1 against the page, and Coral does not:
    * `#F97316` is 2.80:1 on a white card. So the line is derived and the fill

@@ -5,10 +5,10 @@ import { createTheme } from "./theme.js";
 import { toneColors } from "../core/tone.js";
 
 describe("the maths", () => {
-  it("reproduces the ratios DESIGN.md quotes", () => {
-    // These four numbers are printed in DESIGN.md's identity table. If the
-    // maths here disagreed with them, every assertion below would be measuring
-    // something other than what the document claims.
+  it("agrees with an independent calculator on four known pairs", () => {
+    // Anchors, checked by hand against a WCAG calculator. If the maths here
+    // drifted, every assertion below would be measuring the wrong thing while
+    // still passing.
     expect(ratio(LIGHT.text, LIGHT.bg)).toBeCloseTo(17.35, 1);
     expect(ratio(PURPLE[500], LIGHT.bg)).toBeCloseTo(4.42, 1);
     expect(ratio(PURPLE[700], LIGHT.bg)).toBeCloseTo(8.12, 1);
@@ -42,9 +42,9 @@ describe("the maths", () => {
 /**
  * The floors, asserted rather than commented.
  *
- * DESIGN.md calls accessibility "a floor, not a feature" and asks for the
- * measured ratio in the comment beside every colour. A comment is a promise
- * nothing checks; this is the same promise as a build failure.
+ * Accessibility is a floor, not a feature. Every colour here should carry the
+ * ratio it was chosen at — and a comment saying so is a promise nothing checks.
+ * This is the same promise as a build failure.
  */
 describe.each([
   ["light", LIGHT],
@@ -106,9 +106,9 @@ describe.each([
   });
 });
 
-describe("every accent a household can pick", () => {
+describe("every accent an app can offer", () => {
   it("is an edge and a ring, and never a sentence", () => {
-    // DESIGN.md's argument, as an assertion. Jarida Purple is 4.42:1: it clears
+    // The argument, as an assertion. The mark purple is 4.42:1: it clears
     // the 3:1 a UI boundary needs and misses the 4.5:1 body copy needs. The
     // same is true of three of the five running accents — Teal is 3.60:1 and
     // Magenta 4.41:1 on Jarida White — so "an accent is never a sentence" is a
@@ -135,7 +135,7 @@ describe("every accent a household can pick", () => {
   });
 
   it("leaves the fill alone and derives only the line", () => {
-    // The fill is the household's choice and stays exactly what they picked.
+    // The fill is the user's choice and stays exactly what they picked.
     // Only the line moves, and only when it has to.
     const coral = createTheme({ accent: "Coral" });
     expect(coral.color.accent).toBe(ACCENTS.Coral[0]);

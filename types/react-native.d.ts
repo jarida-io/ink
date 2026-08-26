@@ -298,10 +298,22 @@ declare module "react-native" {
     stop(): void;
   }
 
+  export namespace Animated {
+    type WithAnimatedValue<T> = { [K in keyof T]?: T[K] | AnimatedInterpolation };
+  }
+
+  // Animated views accept an interpolation anywhere a style takes a number.
+  export interface AnimatedViewProps extends Omit<ViewProps, "style"> {
+    style?: StyleProp<Animated.WithAnimatedValue<ViewStyle>>;
+  }
+  export interface AnimatedTextProps extends Omit<TextProps, "style"> {
+    style?: StyleProp<Animated.WithAnimatedValue<TextStyle>>;
+  }
+
   export const Animated: {
     Value: typeof AnimatedValue;
-    View: ComponentType<ViewProps>;
-    Text: ComponentType<TextProps>;
+    View: ComponentType<AnimatedViewProps>;
+    Text: ComponentType<AnimatedTextProps>;
     timing(
       value: AnimatedValue,
       config: {

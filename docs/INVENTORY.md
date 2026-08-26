@@ -49,7 +49,7 @@ why, so the next person does not spend a day rediscovering it.
 | `InkSegmented` | **Shipped** | Radio group of choices — for values, where tabs are for views |
 | `InkBreadcrumb` | **Shipped** | Truncates from the middle, because the ends are the parts that mean anything |
 | Sidebar | **Deliberately out** | Every product's sidebar is its own information architecture. The parts it needs — `InkStack`, `InkChoice`, `InkDivider` — are all here |
-| Pagination | **Deliberately out** | Rare in a local-first product; infinite lists are the shape that fits |
+| Pagination | **Deliberately out** | An application concern: the page size, the URL shape and the loading strategy are all product decisions |
 
 ## Controls
 
@@ -84,7 +84,7 @@ why, so the next person does not spend a day rediscovering it.
 | | Status | Notes |
 |---|---|---|
 | `InkDialog` | **Shipped** | Focus trap and restore on web, `Modal` on native, same props |
-| `InkSheet` | **Shipped** | Edge-anchored. The hub's shape |
+| `InkSheet` | **Shipped** | Edge-anchored: arrives from a direction, and a thumb can reach its top |
 | Tooltip | **Deliberately out** | Hover-only on web and long-press on native is not the same component. Use `InkRow`'s description, which is always visible and always read aloud |
 | Popover / menu | **Deliberately out** | Needs a portal and a positioning engine on web, and neither exists on native. `InkSheet` covers the same job with one behaviour |
 | Command palette | **Deliberately out** | A product feature |

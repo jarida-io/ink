@@ -2,7 +2,7 @@
  * The controls. Three of the four spend the edge, and the budget counts them.
  */
 import { useCallback, useId, useRef, type ReactNode } from "react";
-import { useEdgeBudget } from "../core/budget.js";
+import { useEdgeBudget } from "../shared/budget.js";
 import { reachFor } from "../core/reach.js";
 import { TOUCH } from "../tokens/space.js";
 

@@ -12,7 +12,7 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { edgeStateFor } from "../core/edge.js";
-import { useEdgeBudget } from "../core/budget.js";
+import { useEdgeBudget } from "../shared/budget.js";
 import { hitSlop } from "../core/reach.js";
 import { InkEdge } from "./InkEdge.js";
 import { useInkTheme } from "./InkProvider.js";

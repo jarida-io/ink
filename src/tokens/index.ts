@@ -7,3 +7,4 @@ export * from "./theme.js";
 export * from "./contrast.js";
 export * from "./css.js";
 export * from "./glass.js";
+export * from "./control.js";

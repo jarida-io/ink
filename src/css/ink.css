@@ -118,7 +118,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-4);
+  padding: var(--pad-md);
 }
 
 /* ── Group: an ink card that is a container of rows ──────────────────────── *
@@ -135,8 +135,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--ctl-py-md) var(--pad-md);
+  border-bottom: var(--ink-hairline-width) solid var(--color-border);
 }
 
 .ink-group__title {
@@ -157,11 +157,11 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-4);
-  min-height: var(--tap-min);
-  padding: var(--space-3) var(--space-4);
+  min-height: var(--ctl-h-md);
+  padding: var(--ctl-py-md) var(--pad-md);
 }
 
-.ink-row + .ink-row { border-top: 1px solid var(--color-border); }
+.ink-row + .ink-row { border-top: var(--ink-hairline-width) solid var(--color-border); }
 
 .ink-row__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
@@ -228,8 +228,8 @@
     color var(--dur-base) ease;
 }
 
-.ink-choice--tile { min-width: 84px; padding: 10px 13px; border-radius: var(--radius-md); }
-.ink-choice--pill { padding: 7px 15px; border-radius: var(--radius-pill); flex-direction: row; align-items: center; gap: var(--space-2); }
+.ink-choice--tile { min-width: 84px; padding: var(--ctl-py-md) var(--ctl-px-md); border-radius: var(--ctl-r-md); }
+.ink-choice--pill { min-height: var(--ctl-h-sm); padding: 0 var(--ctl-px-pill-sm); border-radius: var(--radius-pill); flex-direction: row; align-items: center; gap: var(--ctl-gap-sm); }
 
 .ink-choice:hover:not(:disabled) { border-color: var(--color-text); }
 
@@ -283,9 +283,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: var(--tap-min);
-  padding: 0 var(--space-5);
-  border-radius: var(--radius-md);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--ctl-px-md);
+  border-radius: var(--ctl-r-md);
   border: var(--ink-border-width) solid var(--color-text);
   font-family: var(--font-body);
   font-size: var(--text-md);
@@ -344,7 +344,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px var(--space-2);
+  padding: 2px var(--ctl-px-sm);
   border-radius: var(--radius-pill);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -367,7 +367,7 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-6) var(--space-4) var(--space-5);
+  padding: var(--pad-lg) var(--pad-md) var(--pad-md);
   background: var(--bg-brand-soft);
   border: var(--ink-border-width) solid var(--color-text);
   border-radius: var(--radius-lg);
@@ -380,7 +380,7 @@
   align-items: flex-start;
   gap: var(--space-2);
   margin: 0;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--ctl-py-sm) var(--ctl-px-sm);
   border: var(--ink-hairline-width) solid var(--ink-tone-fg);
   border-radius: var(--radius-sm);
   background: var(--ink-tone-soft);
@@ -511,11 +511,11 @@
 /* Progressive, in three steps, because the platforms this has to run on are
  * not the platform it was designed for.
  *
- * 1. No backdrop-filter at all — WebKitGTK on the Jetson, older engines. The
+ * 1. No backdrop-filter at all — older WebViews, some embedded engines. The
  *    derived tint alone. Still legible, because the tint was always the part
  *    carrying legibility.
  * 2. backdrop-filter: blur + saturate. Chrome, Safari, Firefox, and the
- *    WKWebView the desktop app actually ships in.
+ *    WebView most desktop wrappers ship.
  * 3. An SVG displacement filter for true refraction. Chrome only, today, so it
  *    is the top step and nothing depends on it.
  */
@@ -556,37 +556,93 @@
 
 /* ═══ Navbar ═══════════════════════════════════════════════════════════════
  *
- * Chrome, so it never wears the edge. It gets a hairline and the glass, and
- * that is the whole visual budget — the page's one loud treatment belongs to
- * whatever the screen is actually for.
+ * Three stages, driven by `nextStage` in @jarida/ink/headless. This file only
+ * renders them.
+ *
+ *     data-stage="expanded"    the whole bar, no material
+ *     data-stage="condensed"   material on, secondary actions gone
+ *     data-stage="collapsed"   one button
+ *
+ * ── The morph ──────────────────────────────────────────────────────────────
+ *
+ * The bar sits in a slot that ends-aligns it, and collapsing animates its
+ * `max-width` down to a single control. Because the slot pushes it right, that
+ * one animated property produces both the shrink and the slide — no keyframes,
+ * no measuring, and it interpolates correctly at any width.
+ *
+ * Everything else cross-fades: the body's opacity goes to zero as the puck's
+ * comes up, and the puck is absolutely positioned so it never affects layout
+ * while it is invisible. `visibility` follows the opacity on a delay so a
+ * faded-out control is not still clickable.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-.ink-navbar {
+.ink-navbar__slot {
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: var(--tap-min);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  justify-content: flex-end;
+  pointer-events: none;
 }
+.ink-navbar__slot > * { pointer-events: auto; }
 
-.ink-navbar--sticky { position: sticky; top: 0; z-index: 40; }
-
-/* Floating: a bar that sits over the content rather than on top of it, which is
-   the shape the glass is actually for. Rounded, inset from the edges, and it
-   keeps clear of the safe area on a device that has one. */
-.ink-navbar--floating {
+.ink-navbar__slot[data-variant="sticky"] { position: sticky; top: 0; z-index: 40; }
+.ink-navbar__slot[data-variant="floating"] {
   position: sticky;
   top: max(var(--space-3), env(safe-area-inset-top, 0px));
   z-index: 40;
-  margin: var(--space-3) var(--space-4);
-  border: none;
+  padding: 0 var(--space-4);
+}
+
+.ink-navbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ctl-gap-md);
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--ctl-h-lg);
+  padding: var(--ctl-py-md) var(--ctl-px-md);
+  border-bottom: var(--ink-hairline-width) solid var(--color-border);
+  overflow: hidden;
+  transition:
+    max-width var(--dur-slow) var(--ink-ease),
+    border-radius var(--dur-slow) var(--ink-ease),
+    padding var(--dur-slow) var(--ink-ease),
+    background var(--dur-base) ease,
+    box-shadow var(--dur-base) ease,
+    border-color var(--dur-base) ease;
+}
+
+.ink-navbar--floating {
+  border-bottom: none;
   border-radius: var(--radius-xl);
+  margin-top: var(--space-3);
   box-shadow: 0 6px 24px rgba(23, 22, 22, 0.10), 0 1px 2px rgba(23, 22, 22, 0.06);
 }
 
+/* No material until something has passed underneath. An always-on bar spends
+   contrast before it has anything to separate. */
+.ink-navbar[data-material="false"] {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+  box-shadow: none;
+}
+.ink-navbar[data-material="false"]::after { box-shadow: none; }
+
+.ink-navbar__body {
+  display: flex;
+  align-items: center;
+  gap: var(--ctl-gap-md);
+  width: 100%;
+  min-width: 0;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--dur-base) ease, visibility 0s;
+}
+
 .ink-navbar__lead,
-.ink-navbar__trail { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.ink-navbar__trail { display: flex; align-items: center; gap: var(--ctl-gap-sm); flex-shrink: 0; }
+.ink-navbar__spacer { flex: 1 1 auto; min-width: 0; }
 
 .ink-navbar__title {
   margin: 0;
@@ -594,7 +650,6 @@
   font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  font-style: italic;
   letter-spacing: -0.02em;
   color: var(--color-text);
   overflow: hidden;
@@ -602,33 +657,97 @@
   white-space: nowrap;
 }
 
-.ink-navbar__spacer { flex: 1 1 auto; min-width: 0; }
-
-/* The scroll edge.
- *
- * Apple's bars stay clear until content passes under them, then the material
- * asserts itself. It is a good idea for a reason that is not decorative: an
- * always-on bar spends contrast it has not needed yet, and a bar that appears
- * on scroll tells you there is something above. `InkNavbar` sets data-scrolled
- * from an IntersectionObserver on a sentinel — no scroll listener, so it costs
- * nothing on a board that is also running a language model. */
-.ink-navbar[data-scrolled="false"] {
-  background: transparent;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  border-bottom-color: transparent;
-  box-shadow: none;
+.ink-navbar__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ctl-gap-sm);
+  min-width: var(--ctl-h-md);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--ctl-px-sm);
+  border: none;
+  border-radius: var(--ctl-r-md);
+  background: none;
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  cursor: pointer;
 }
+.ink-navbar__action:hover { background: var(--color-hover); }
+.ink-navbar__action:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.ink-navbar[data-scrolled="false"]::after { box-shadow: none; }
+/* ── The puck ──────────────────────────────────────────────────────────────
+ * Absolutely positioned so it costs no layout while invisible, and sized to the
+ * control scale so the collapsed bar is exactly one control wide. */
+.ink-navbar__puck {
+  position: absolute;
+  top: 50%;
+  right: var(--ctl-py-md);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ctl-h-md);
+  height: var(--ctl-h-md);
+  padding: 0;
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-base) ease, visibility 0s var(--dur-base);
+}
+.ink-navbar__puck:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 
-.ink-navbar { transition: background var(--dur-base) ease, box-shadow var(--dur-base) ease, border-color var(--dur-base) ease; }
+/* Three lines, drawn rather than imported, so the library needs no icon set. */
+.ink-navbar__puckMark,
+.ink-navbar__puckMark::before,
+.ink-navbar__puckMark::after {
+  display: block;
+  width: 15px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+.ink-navbar__puckMark { position: relative; }
+.ink-navbar__puckMark::before,
+.ink-navbar__puckMark::after { content: ""; position: absolute; left: 0; }
+.ink-navbar__puckMark::before { top: -5px; }
+.ink-navbar__puckMark::after { top: 5px; }
+
+/* ── Collapsed ───────────────────────────────────────────────────────────── */
+
+.ink-navbar[data-stage="collapsed"] {
+  /* One control, plus the padding either side of it. */
+  max-width: calc(var(--ctl-h-md) + var(--ctl-py-md) * 2);
+  padding: var(--ctl-py-md);
+  border-radius: var(--radius-pill);
+  border-bottom: none;
+}
+.ink-navbar[data-stage="collapsed"] .ink-navbar__body {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-base) ease, visibility 0s var(--dur-base);
+}
+.ink-navbar[data-stage="collapsed"] .ink-navbar__puck {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--dur-base) ease var(--dur-fast), visibility 0s;
+  /* Once the bar has shrunk to exactly one control, the bar IS the control.
+     Leaving the puck its own border draws a button inside a pill, which reads
+     as two nested things and is a tell that the collapse was bolted on. */
+  border-color: transparent;
+  background: transparent;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .ink-navbar { transition-duration: 1ms; }
+  .ink-navbar,
+  .ink-navbar__body,
+  .ink-navbar__puck { transition-duration: 1ms; }
 }
-
-.ink-navbar__sentinel { height: 1px; margin-bottom: -1px; pointer-events: none; }
 
 /* ═══ Divider ══════════════════════════════════════════════════════════════ */
 
@@ -654,7 +773,7 @@
 .ink-tabs {
   display: flex;
   gap: var(--space-1);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--ink-hairline-width) solid var(--color-border);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -665,8 +784,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--tap-min);
-  padding: 0 var(--space-4);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--ctl-px-md);
   border: none;
   background: none;
   font-family: var(--font-body);
@@ -697,8 +816,8 @@
 .ink-tabs__tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 .ink-tabs__badge {
-  min-width: 18px;
-  padding: 0 5px;
+  min-width: var(--space-5);
+  padding: 0 var(--space-1);
   border-radius: var(--radius-pill);
   background: var(--color-accent-soft);
   color: var(--color-accent-line);
@@ -750,7 +869,7 @@
 .ink-table table { width: 100%; border-collapse: collapse; font-size: var(--text-base); }
 .ink-table caption { padding: var(--space-3) var(--space-4) 0; text-align: left; }
 .ink-table th,
-.ink-table td { padding: var(--space-3) var(--space-4); text-align: left; }
+.ink-table td { padding: var(--ctl-py-md) var(--pad-md); text-align: left; }
 .ink-table thead th {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -761,7 +880,7 @@
   border-bottom: var(--ink-border-width) solid var(--color-text);
   white-space: nowrap;
 }
-.ink-table tbody tr + tr td { border-top: 1px solid var(--color-border); }
+.ink-table tbody tr + tr td { border-top: var(--ink-hairline-width) solid var(--color-border); }
 /* Anything a reader compares down a column lines up and uses one glyph width
    per digit, or the comparison is being made by eye against ragged edges. */
 .ink-table [data-numeric] {
@@ -773,7 +892,7 @@
 /* ═══ List ═════════════════════════════════════════════════════════════════ */
 
 .ink-list { display: flex; flex-direction: column; }
-.ink-list > * + * { border-top: 1px solid var(--color-border); }
+.ink-list > * + * { border-top: var(--ink-hairline-width) solid var(--color-border); }
 
 /* ═══ Spinner ══════════════════════════════════════════════════════════════ */
 
@@ -853,9 +972,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--ctl-py-md) var(--pad-md);
   border: var(--ink-border-width) solid var(--color-text);
-  border-radius: var(--radius-md);
+  border-radius: var(--ctl-r-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-ink);
   color: var(--color-text);
@@ -894,10 +1013,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--tap-min);
-  padding: 0 var(--space-3);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--ctl-px-sm);
   border: var(--ink-hairline-width) solid var(--color-border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--ctl-r-md);
   background: var(--color-surface);
   transition: border-color var(--dur-base) ease, box-shadow var(--dur-base) ease;
 }
@@ -925,9 +1044,9 @@
 
 .ink-textarea {
   width: 100%;
-  padding: var(--space-3);
+  padding: var(--ctl-py-md) var(--ctl-px-sm);
   border: var(--ink-hairline-width) solid var(--color-border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--ctl-r-md);
   background: var(--color-surface);
   font-family: var(--font-body);
   font-size: var(--text-md);
@@ -959,8 +1078,8 @@
 }
 .ink-select select {
   appearance: none;
-  min-height: var(--tap-min);
-  padding: 0 var(--space-8) 0 var(--space-3);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--space-8) 0 var(--ctl-px-sm);
   border: var(--ink-hairline-width) solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -1049,7 +1168,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-6);
+  padding: var(--pad-lg);
   border: var(--ink-border-width) solid var(--color-text);
   border-radius: var(--radius-lg);
   background: var(--color-surface);

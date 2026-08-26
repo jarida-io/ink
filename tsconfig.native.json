@@ -8,5 +8,5 @@
       "react-native": ["./types/react-native.d.ts"]
     }
   },
-  "include": ["src/tokens", "src/core", "src/native", "types"]
+  "include": ["src/tokens", "src/core", "src/shared", "src/headless", "src/native", "types"]
 }

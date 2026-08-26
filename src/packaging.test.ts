@@ -46,7 +46,7 @@ describe("what ships", () => {
     // `@jarida/ink` and `@jarida/ink/web` must be importable in a project that
     // has never heard of React Native.
     const offenders: string[] = [];
-    for (const dir of ["tokens", "core", "web"]) {
+    for (const dir of ["tokens", "core", "shared", "headless", "react"]) {
       for (const file of sources(join(SRC, dir))) {
         const text = readFileSync(file, "utf8");
         if (/from\s+"react-native"/.test(text)) offenders.push(file.replace(SRC + "/", ""));
@@ -79,7 +79,7 @@ describe("what ships", () => {
       return found;
     };
 
-    const web = names("web");
+    const web = names("react");
     const native = names("native");
 
     // Each platform is allowed exactly what the other genuinely cannot have.
@@ -98,7 +98,7 @@ describe("what ships", () => {
     // crash, and the native type-check is the only thing that would catch it —
     // so it is worth catching here too, where the message is clearer.
     const offenders: string[] = [];
-    for (const dir of ["tokens", "core"]) {
+    for (const dir of ["tokens", "core", "headless"]) {
       for (const file of sources(join(SRC, dir))) {
         if (file.endsWith(".test.ts") || file.endsWith(".test.tsx")) continue;
         const text = readFileSync(file, "utf8");

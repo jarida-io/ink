@@ -87,7 +87,7 @@ export function createTheme(options: InkThemeOptions = {}): InkTheme {
   // the dark sidebar measures ~3.1:1, which passes but reads faint". Landing on
   // 3.00 reproduced precisely the faintness that comment was complaining about.
   //
-  // DESIGN.md gives the reason it matters more here than in most products:
+  // The reason it matters:
   // important UI lines have to stay visible on a dimmed 800x480 panel read from
   // across a room, which is also why the edge is 2px rather than a hairline. A
   // boundary that only just clears the minimum on a bright monitor is a

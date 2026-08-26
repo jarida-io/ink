@@ -56,6 +56,8 @@
  *   4px in layout instead of overlapping the neighbour.
  */
 
+import { BORDER } from "./control.js";
+
 /** The rungs. `raised` is pointer-only; a finger has no hover. */
 export type InkState = "rest" | "raised" | "pressed";
 
@@ -66,9 +68,9 @@ export interface InkEdgeTokens {
   raised: number;
   /** Down onto the plate. */
   pressed: number;
-  /** The border. 2px, not a hairline — it has to stay visible on a dim panel. */
+  /** The structural border. Anything carrying the edge. */
   borderWidth: number;
-  /** The hairline everything unchosen wears. */
+  /** The separating hairline. One device pixel; see `tokens/control.ts`. */
   hairlineWidth: number;
 }
 
@@ -76,8 +78,8 @@ export const EDGE: InkEdgeTokens = {
   rest: 4,
   raised: 7,
   pressed: 0,
-  borderWidth: 2,
-  hairlineWidth: 1.5,
+  borderWidth: BORDER.ink,
+  hairlineWidth: BORDER.hairline,
 };
 
 /**
@@ -91,8 +93,8 @@ export const EDGE_COMPACT: InkEdgeTokens = {
   rest: 4,
   raised: 4,
   pressed: 2,
-  borderWidth: 2,
-  hairlineWidth: 1.5,
+  borderWidth: BORDER.ink,
+  hairlineWidth: BORDER.hairline,
 };
 
 /** How far the *face* has moved from where it rests, in px on both axes. */

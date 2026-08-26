@@ -27,7 +27,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { isDev, warnOnce } from "./env.js";
+import { isDev, warnOnce } from "../core/env.js";
 
 interface BudgetHandle {
   max: number;
