@@ -4,6 +4,7 @@ import {
   NavbarBehaviour,
   nextStage,
   stageHasMaterial,
+  titlePlacement,
   type NavbarStage,
 } from "./navbar.js";
 
@@ -81,6 +82,16 @@ describe("hysteresis", () => {
       seen.push(stage);
     }
     expect(new Set(seen).size, `stage changed ${new Set(seen).size} ways on a 1px jitter`).toBe(1);
+  });
+});
+
+describe("a large title", () => {
+  it("moves into the bar at the same moment the material arrives", () => {
+    // One moment, not two thresholds. Separate numbers is how the title and
+    // the background end up changing a frame apart.
+    for (const stage of ["expanded", "condensed", "collapsed"] as NavbarStage[]) {
+      expect(titlePlacement(stage) === "in-bar").toBe(stageHasMaterial(stage));
+    }
   });
 });
 

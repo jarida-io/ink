@@ -67,3 +67,16 @@ export const MEASURE = {
   /** The reading column. */
   content: 760,
 } as const;
+
+/**
+ * Navigation widths.
+ *
+ * The rail is one control plus its padding either side, so a rail and a
+ * collapsed navbar are the same width and line up when both are on screen.
+ * The sidebar is wide enough for a two-word destination at body size without
+ * truncating, which is what decides it rather than a round number.
+ */
+export const NAV_WIDTH = {
+  sidebar: 248,
+  rail: 68,
+} as const;

@@ -15,6 +15,7 @@ import { cssBezier } from "./motion.js";
 import { WEB_FONT_STACKS } from "./type.js";
 import { glassSurface } from "./glass.js";
 import { DARK_GREY, GREY } from "./color.js";
+import { NAV_WIDTH } from "./space.js";
 import {
   CONTAINER_PAD,
   CONTROL_HEIGHT,
@@ -62,6 +63,7 @@ export function cssVariables(theme: InkTheme): Record<string, string> {
     "--color-surface": c.surface,
     "--color-content": c.content,
     "--color-sidebar": c.chrome,
+    "--color-chrome": c.chrome,
 
     "--color-text": c.text,
     "--color-text-secondary": c.textSecondary,
@@ -157,6 +159,13 @@ export function cssVariables(theme: InkTheme): Record<string, string> {
     "--row-height-md": px(theme.rowHeight.md),
     "--row-height-lg": px(theme.rowHeight.lg),
     "--content-max-width": px(theme.measure.content),
+    // Namespaced, and deliberately so. `--sidebar-width` is a name products
+    // commonly already use for their own navigation, and emitting it would
+    // silently resize a shipped screen the moment the tokens were adopted. A
+    // generic name is only safe for a value that means the same thing to
+    // everyone; this one does not.
+    "--ink-nav-sidebar": px(NAV_WIDTH.sidebar),
+    "--ink-nav-rail": px(NAV_WIDTH.rail),
 
     // Motion
     "--dur-fast": `${theme.duration.fast}ms`,

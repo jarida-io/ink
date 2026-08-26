@@ -125,6 +125,21 @@ export function stageHasMaterial(stage: NavbarStage): boolean {
 }
 
 /**
+ * Where a large title belongs at this stage.
+ *
+ * The pattern is a screen name that starts big, below the bar, and moves *into*
+ * the bar as the reader scrolls — so the name is prominent when there is
+ * nothing to compete with and out of the way once there is.
+ *
+ * It needs no threshold of its own. "The bar has taken its material" and "the
+ * title has moved in" are the same moment, and giving them separate numbers is
+ * how they end up a frame apart.
+ */
+export function titlePlacement(stage: NavbarStage): "below" | "in-bar" {
+  return stage === "expanded" ? "below" : "in-bar";
+}
+
+/**
  * A tiny stateful wrapper, for hosts that would rather not track the previous
  * offset themselves. Still no framework and no DOM.
  */

@@ -546,6 +546,14 @@
 /* Reduced transparency turns it back into paper. Nothing is lost but the
  * effect: the tint was already carrying the legibility, so the solid version
  * measures better, not worse. */
+/* A vertical surface — a sidebar, a rail — catches the light down its inner
+   edge rather than along its top. Same two hairlines, turned ninety degrees. */
+.ink-glass--vertical::after {
+  box-shadow:
+    inset 1px 0 0 var(--ink-glass-rim),
+    inset -1px 0 0 var(--ink-glass-rim-shade);
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .ink-glass {
     background: var(--color-surface);
@@ -583,7 +591,13 @@
 }
 .ink-navbar__slot > * { pointer-events: auto; }
 
-.ink-navbar__slot[data-variant="sticky"] { position: sticky; top: 0; z-index: 40; }
+.ink-navbar__slot[data-variant="sticky"] {
+  position: sticky;
+  /* Notch and status bar. `env()` resolves to 0 where there is no inset, so
+     this is safe on a desktop and correct on a phone without a media query. */
+  top: env(safe-area-inset-top, 0px);
+  z-index: 40;
+}
 .ink-navbar__slot[data-variant="floating"] {
   position: sticky;
   top: max(var(--space-3), env(safe-area-inset-top, 0px));
@@ -610,6 +624,8 @@
     box-shadow var(--dur-base) ease,
     border-color var(--dur-base) ease;
 }
+
+.ink-navbar--static { position: static; }
 
 .ink-navbar--floating {
   border-bottom: none;
@@ -743,9 +759,71 @@
   background: transparent;
 }
 
+/* ── The puck's badge ──────────────────────────────────────────────────────
+ * A hidden action can still need you. Sits on the rim rather than inside,
+ * because the puck is 44px and the glyph already owns the middle. */
+.ink-navbar__puckBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: var(--space-5);
+  height: var(--space-5);
+  padding: 0 var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+/* ── The large title ───────────────────────────────────────────────────────
+ *
+ * Starts big below the bar and moves into it. The name is prominent when there
+ * is nothing competing with it, and out of the way the moment there is.
+ *
+ * It collapses its own height rather than sliding, so the content beneath it
+ * moves up as it goes. A title that faded in place would leave a rectangle of
+ * nothing where it used to be, which reads as a loading state. `grid-template-
+ * rows: 0fr -> 1fr` is the one way to animate to a content-driven height.
+ */
+.ink-navbar__large {
+  display: grid;
+  grid-template-rows: 1fr;
+  padding: 0 var(--pad-md);
+  transition: grid-template-rows var(--dur-slow) var(--ink-ease),
+              opacity var(--dur-base) ease,
+              padding var(--dur-slow) var(--ink-ease);
+}
+
+.ink-navbar__large[data-shown="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.ink-navbar__largeTitle {
+  margin: 0;
+  overflow: hidden;
+  padding: var(--space-2) 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.03em;
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ink-navbar,
   .ink-navbar__body,
+  .ink-navbar__large,
   .ink-navbar__puck { transition-duration: 1ms; }
 }
 
@@ -1206,4 +1284,741 @@
   .ink-spinner { animation-duration: 2s; }
   .ink-skeleton--shimmer { animation: none; }
   .ink-toast { animation: none; }
+}
+
+/* ═══ Navigation: bar, rail, sidebar ═══════════════════════════════════════
+ *
+ * One list of destinations at three widths. `.ink-nav__item` is shared by all
+ * three so a badge, a selected state or a focus ring is defined once.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.ink-nav__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--ctl-h-md);
+  padding: var(--ctl-py-sm) var(--ctl-px-sm);
+  border: none;
+  border-radius: var(--ctl-r-md);
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--dur-base) ease, background var(--dur-base) ease;
+}
+
+.ink-nav__item--row { flex-direction: row; justify-content: flex-start; gap: var(--ctl-gap-sm); }
+.ink-nav__item--row .ink-nav__badge { position: static; margin-left: auto; }
+/* A rail has no label, so the badge returns to the glyph. */
+.ink-sidebar--rail .ink-nav__badge { position: absolute; top: var(--space-1); left: 55%; margin-left: 0; }
+
+.ink-nav__item:hover:not(:disabled) { color: var(--color-text); background: var(--color-hover); }
+.ink-nav__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.ink-nav__item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.ink-nav__item[aria-current="page"] { color: var(--color-text); }
+
+.ink-nav__icon { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.ink-nav__label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* The selected mark.
+ *
+ * Selection is never carried by colour alone — a difference in text colour is
+ * invisible to a good share of readers and disappears entirely in high
+ * contrast. The mark is a shape, and the colour is a bonus. */
+.ink-nav__mark {
+  position: absolute;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-line);
+  opacity: 0;
+  transition: opacity var(--dur-base) ease, transform var(--dur-base) var(--ink-ease);
+}
+.ink-nav__item[aria-current="page"] .ink-nav__mark { opacity: 1; }
+
+/* Placed by shape, not by one rule.
+ *
+ * In a column (a bottom bar) the badge belongs on the glyph, because that is
+ * the only thing there. In a row with a label it belongs at the END of the row
+ * — sitting it on the glyph puts it straight through the first word, which is
+ * what the first version did. A rail is a row with no label, so it goes back
+ * onto the glyph. */
+.ink-nav__badge {
+  position: absolute;
+  top: var(--space-1);
+  left: 55%;
+  min-width: var(--space-4);
+  height: var(--space-4);
+  padding: 0 var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+/* A dot carries no number, so it does not need to be wide enough for one. */
+.ink-nav__badge[data-dot] { min-width: var(--space-2); height: var(--space-2); padding: 0; }
+
+/* Three dots, drawn, so the library needs no icon set for its own overflow. */
+.ink-nav__more,
+.ink-nav__more::before,
+.ink-nav__more::after {
+  width: 4px; height: 4px; border-radius: var(--radius-pill); background: currentColor; display: block;
+}
+.ink-nav__more { position: relative; }
+.ink-nav__more::before, .ink-nav__more::after { content: ""; position: absolute; top: 0; }
+.ink-nav__more::before { left: -7px; }
+.ink-nav__more::after { left: 7px; }
+
+/* ── Bottom bar ──────────────────────────────────────────────────────────── */
+
+/* The navbar's treatment, turned over.
+ *
+ * Same material, same three stages, same reason: a bar sitting on top of
+ * content it does not separate from is a lid, and one that appears when there
+ * IS something under it is a layer. The differences are all direction — the
+ * material arrives from the bottom, the collapse contracts toward the trailing
+ * corner where a thumb already is, and the safe area is the home indicator
+ * rather than the notch.
+ */
+.ink-bottombar {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  max-width: 100%;
+  margin-left: auto;
+  padding: var(--space-1) var(--space-2);
+  padding-bottom: max(var(--space-1), env(safe-area-inset-bottom, 0px));
+  border-top: var(--ink-hairline-width) solid var(--color-border);
+  overflow: hidden;
+  transition:
+    max-width var(--dur-slow) var(--ink-ease),
+    border-radius var(--dur-slow) var(--ink-ease),
+    padding var(--dur-slow) var(--ink-ease),
+    background var(--dur-base) ease,
+    box-shadow var(--dur-base) ease,
+    border-color var(--dur-base) ease;
+}
+
+.ink-bottombar__body { display: flex; align-items: stretch; gap: var(--space-1); width: 100%; min-width: 0;
+  opacity: 1; visibility: visible; transition: opacity var(--dur-base) ease, visibility 0s; }
+
+/* Lifted off the edge as a pill. The shape the material is actually for. */
+.ink-bottombar--floating {
+  border-top: none;
+  border-radius: var(--radius-2xl);
+  margin: 0 var(--space-4) max(var(--space-3), env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--space-1);
+  box-shadow: 0 6px 24px rgba(23, 22, 22, 0.10), 0 1px 2px rgba(23, 22, 22, 0.06);
+}
+
+/* No material until something has passed underneath. */
+.ink-bottombar[data-material="false"] {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-top-color: transparent;
+  box-shadow: none;
+}
+.ink-bottombar[data-material="false"]::after { box-shadow: none; }
+
+/* Contracted: one control, at the trailing corner where a thumb already is. */
+.ink-bottombar[data-stage="collapsed"] {
+  max-width: calc(var(--ctl-h-md) + var(--space-2) * 2);
+  border-radius: var(--radius-pill);
+  border-top: none;
+  padding: var(--space-2);
+}
+.ink-bottombar[data-stage="collapsed"] .ink-bottombar__body {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-base) ease, visibility 0s var(--dur-base);
+}
+
+.ink-bottombar__puck {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ctl-h-md);
+  height: var(--ctl-h-md);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-base) ease, visibility 0s var(--dur-base);
+}
+.ink-bottombar[data-stage="collapsed"] .ink-bottombar__puck {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--dur-base) ease var(--dur-fast), visibility 0s;
+}
+.ink-bottombar__puck:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+.ink-bottombar .ink-nav__item { flex: 1 1 0; min-width: 0; }
+
+/* The mark sits above the icon, where a thumb is not covering it. */
+.ink-bottombar .ink-nav__mark {
+  top: 2px;
+  left: 50%;
+  width: var(--space-5);
+  height: 3px;
+  transform: translateX(-50%) scaleX(0.4);
+}
+.ink-bottombar .ink-nav__item[aria-current="page"] .ink-nav__mark { transform: translateX(-50%) scaleX(1); }
+
+.ink-bottombar[data-icons-only] .ink-nav__item { padding: var(--ctl-py-sm) var(--space-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-bottombar, .ink-bottombar__body, .ink-bottombar__puck { transition-duration: 1ms; }
+}
+
+/* ── Sidebar and rail ────────────────────────────────────────────────────── */
+
+.ink-sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: var(--ink-nav-sidebar);
+  height: 100%;
+  padding: var(--pad-md) var(--space-2);
+  padding-top: max(var(--pad-md), env(safe-area-inset-top, 0px));
+  /* The glass, not a solid fill. `.ink-glass` supplies the tint and the blur;
+     what is left here is the rule, because a sidebar over scrolling content
+     still needs a boundary that does not depend on the blur landing. */
+  border-right: var(--ink-hairline-width) solid var(--color-border);
+  transition: width var(--dur-slow) var(--ink-ease);
+}
+
+.ink-sidebar--rail { width: var(--ink-nav-rail); align-items: center; }
+
+.ink-sidebar__head,
+.ink-sidebar__foot { padding: 0 var(--space-2); flex-shrink: 0; }
+.ink-sidebar__foot { margin-top: auto; }
+
+.ink-sidebar__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ink-sidebar__section { display: flex; flex-direction: column; gap: 2px; }
+.ink-sidebar__sectionLabel { padding: 0 var(--space-3) var(--space-1); }
+.ink-sidebar__rule { display: block; height: var(--ink-hairline-width); margin: var(--space-2) var(--space-3); background: var(--color-border); }
+
+.ink-sidebar .ink-nav__item { width: 100%; }
+.ink-sidebar--rail .ink-nav__item { width: var(--ctl-h-md); padding: 0; justify-content: center; }
+
+/* The mark is a bar down the leading edge — the shape a vertical list wants,
+   and it survives the rail losing its labels. */
+.ink-sidebar .ink-nav__mark {
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: var(--space-5);
+  transform: translateY(-50%) scaleY(0.3);
+}
+.ink-sidebar .ink-nav__item[aria-current="page"] .ink-nav__mark { transform: translateY(-50%) scaleY(1); }
+.ink-sidebar .ink-nav__item[aria-current="page"] { background: var(--color-accent-soft); }
+
+.ink-sidebar__toggle {
+  position: absolute;
+  top: var(--space-5);
+  right: calc(var(--space-3) * -1);
+  width: var(--space-6);
+  height: var(--space-6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.ink-sidebar__toggle:hover { color: var(--color-text); border-color: var(--color-text); }
+.ink-sidebar__toggle:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.ink-sidebar__chev {
+  width: 7px; height: 7px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(1px, -1px);
+}
+.ink-sidebar--rail .ink-sidebar__chev { transform: rotate(-135deg) translate(1px, -1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-sidebar,
+  .ink-nav__mark { transition-duration: 1ms; }
+}
+
+/* ═══ Radio group ══════════════════════════════════════════════════════════
+ * Stacked, with room for the description that is the reason to use one at all.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.ink-radios { display: flex; flex-direction: column; gap: var(--space-1); }
+
+.ink-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ctl-gap-md);
+  min-height: var(--ctl-h-md);
+  padding: var(--ctl-py-md) var(--ctl-px-sm);
+  border: none;
+  border-radius: var(--ctl-r-md);
+  background: none;
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-base) ease;
+}
+.ink-radio:hover:not(:disabled) { background: var(--color-hover); }
+.ink-radio:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-radio:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+
+.ink-radio__dot {
+  flex-shrink: 0;
+  width: var(--space-5);
+  height: var(--space-5);
+  margin-top: 1px;
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  display: grid;
+  place-items: center;
+  transition: border-color var(--dur-base) ease;
+}
+.ink-radio__dot::after {
+  content: "";
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  transform: scale(0);
+  transition: transform var(--dur-base) var(--ink-ease);
+}
+.ink-radio[aria-checked="true"] .ink-radio__dot::after { transform: scale(1); }
+
+.ink-radio__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ink-radio__label { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.ink-radio__desc { font-size: var(--text-sm); line-height: var(--leading-base); color: var(--color-text-secondary); max-width: 60ch; }
+
+/* ═══ Menu ═════════════════════════════════════════════════════════════════ */
+
+.ink-menu { position: relative; display: inline-flex; }
+
+.ink-menu__list {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  z-index: 50;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--ctl-r-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-ink);
+}
+.ink-menu__list[data-align="start"] { left: 0; }
+.ink-menu__list[data-align="end"] { right: 0; }
+/* Flips upward when it will not fit. Measured once, at open. */
+.ink-menu__list[data-flip] { top: auto; bottom: calc(100% + var(--space-2)); }
+
+.ink-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ctl-gap-sm);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--ctl-px-sm);
+  border: none;
+  border-radius: var(--ctl-r-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.ink-menu__item:hover:not(:disabled) { background: var(--color-hover); }
+.ink-menu__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.ink-menu__item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.ink-menu__item[data-tone="danger"] { color: var(--color-destructive-fg); }
+/* A rule above, for separating the destructive one from the routine ones. */
+.ink-menu__item[data-separated] { margin-top: var(--space-1); border-top: var(--ink-hairline-width) solid var(--color-border); padding-top: var(--space-1); }
+
+/* ═══ Calendar ═════════════════════════════════════════════════════════════ */
+
+.ink-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--pad-md);
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  width: max-content;
+}
+
+.ink-calendar__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+
+.ink-calendar__month {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.ink-calendar__page {
+  width: var(--ctl-h-md);
+  height: var(--ctl-h-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--ctl-r-md);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.ink-calendar__page:hover { background: var(--color-hover); color: var(--color-text); }
+.ink-calendar__page:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+
+.ink-calendar__chev { width: 8px; height: 8px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; }
+.ink-calendar__chev[data-dir="prev"] { transform: rotate(45deg) translate(1px, -1px); }
+.ink-calendar__chev[data-dir="next"] { transform: rotate(-135deg) translate(1px, -1px); }
+
+.ink-calendar__grid { display: flex; flex-direction: column; gap: 2px; }
+.ink-calendar__row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+
+.ink-calendar__weekday {
+  display: grid;
+  place-items: center;
+  height: var(--space-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.ink-calendar__day {
+  position: relative;
+  width: var(--ctl-h-md);
+  height: var(--ctl-h-md);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--ctl-r-md);
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.ink-calendar__day:hover:not(:disabled) { background: var(--color-hover); }
+.ink-calendar__day:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.ink-calendar__day:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Borrowed from the neighbouring month: present, so the grid keeps its shape,
+   and quiet, so it does not read as part of this month. */
+.ink-calendar__day[data-outside] { color: var(--color-text-tertiary); }
+
+/* Today is a ring, not a fill — a fill would be indistinguishable from the
+   selection, and on the day you open the calendar those are different things. */
+.ink-calendar__day[data-today]::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: var(--ink-hairline-width) solid var(--color-accent-line);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.ink-calendar__day[data-selected] {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: var(--weight-bold);
+}
+.ink-calendar__day[data-selected][data-today]::after { border-color: var(--color-text-on-accent); }
+
+/* The middle of a range is a band, and the square corners are what make it
+   read as continuous rather than as a row of separate selections. */
+.ink-calendar__day[data-in-range] { background: var(--color-accent-soft); border-radius: 0; }
+.ink-calendar__day[data-range-start] { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ink-calendar__day[data-range-end] { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+/* ═══ Picker field ═════════════════════════════════════════════════════════ */
+
+.ink-picker { position: relative; display: inline-flex; flex-direction: column; }
+
+.ink-picker__field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ctl-gap-md);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--ctl-px-sm);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  border-radius: var(--ctl-r-md);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ink-picker__field:hover:not(:disabled) { border-color: var(--color-text); }
+.ink-picker__field:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.ink-picker__field:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-picker__value--empty { color: var(--color-text-tertiary); font-weight: var(--weight-regular); }
+
+.ink-picker__mark {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: var(--ink-border-width) solid currentColor;
+  border-radius: var(--radius-xs);
+  position: relative;
+  opacity: 0.7;
+}
+.ink-picker__mark::before {
+  content: ""; position: absolute; left: -2px; right: -2px; top: 2px;
+  border-top: var(--ink-border-width) solid currentColor;
+}
+
+.ink-picker__pop { position: absolute; top: calc(100% + var(--space-2)); left: 0; z-index: 50; }
+
+/* ═══ Range slider ═════════════════════════════════════════════════════════
+ * Two native inputs stacked on one track, so the whole platform keyboard and
+ * screen-reader behaviour comes for free.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.ink-range { position: relative; height: 26px; display: flex; align-items: center; }
+.ink-range[data-disabled] { opacity: 0.5; }
+
+.ink-range__track {
+  position: absolute;
+  left: 10px; right: 10px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  border: var(--ink-hairline-width) solid var(--color-text);
+}
+.ink-range__fill { position: absolute; top: 0; bottom: 0; background: var(--color-accent); }
+
+.ink-range__input {
+  position: absolute;
+  left: 0; right: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  background: none;
+  /* The track is drawn once, above; these two exist only for their thumbs, so
+     they must not intercept the pointer between them. */
+  pointer-events: none;
+}
+.ink-range__input::-webkit-slider-thumb {
+  appearance: none;
+  pointer-events: auto;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: var(--ink-border-width) solid var(--color-text);
+  box-shadow: var(--ink-press-compact) var(--ink-press-compact) 0 var(--border-ink);
+}
+.ink-range__input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: var(--ink-border-width) solid var(--color-text);
+  box-shadow: var(--ink-press-compact) var(--ink-press-compact) 0 var(--border-ink);
+}
+.ink-range__input::-webkit-slider-runnable-track { background: none; }
+.ink-range__input:focus-visible { outline: none; }
+.ink-range__input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ═══ Form ═════════════════════════════════════════════════════════════════ */
+
+.ink-form { display: flex; flex-direction: column; gap: var(--space-6); }
+.ink-form__body { display: flex; flex-direction: column; gap: var(--space-5); }
+.ink-form__actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+.ink-form__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--pad-md);
+  border: var(--ink-border-width) solid var(--color-destructive-fg);
+  border-radius: var(--ctl-r-md);
+  background: var(--color-destructive-soft);
+  color: var(--color-destructive-fg);
+}
+.ink-form__summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.ink-form__summary ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+.ink-form__summary a { color: inherit; }
+
+.ink-formfield { display: flex; flex-direction: column; gap: var(--space-2); }
+.ink-formfield__label { font-size: var(--text-md); font-weight: var(--weight-semibold); color: var(--color-text); }
+/* Spelled out. An asterisk is a convention nobody has ever been taught. */
+.ink-formfield__required { font-weight: var(--weight-regular); color: var(--color-text-secondary); }
+.ink-formfield__hint { font-size: var(--text-sm); line-height: var(--leading-base); color: var(--color-text-secondary); max-width: 62ch; }
+.ink-formfield__error { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-destructive-fg); }
+
+/* ═══ Chat bubbles ═════════════════════════════════════════════════════════ */
+
+.ink-bubbles { display: flex; flex-direction: column; gap: 2px; }
+
+.ink-bubble { display: flex; flex-direction: column; gap: 2px; max-width: 78%; }
+.ink-bubble--mine { align-self: flex-end; align-items: flex-end; }
+.ink-bubble--theirs { align-self: flex-start; align-items: flex-start; }
+/* A run of messages from one person is one utterance, so the gap inside a run
+   is smaller than the gap between runs. */
+.ink-bubble[data-position="only"], .ink-bubble[data-position="first"] { margin-top: var(--space-3); }
+
+.ink-bubble__author {
+  padding: 0 var(--ctl-px-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.ink-bubble__body {
+  position: relative;
+  padding: var(--ctl-py-md) var(--ctl-px-md);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-md);
+  line-height: var(--leading-base);
+  /* Long words and URLs break rather than widening the bubble past its measure. */
+  overflow-wrap: anywhere;
+}
+
+.ink-bubble--theirs .ink-bubble__body {
+  background: var(--color-surface);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  color: var(--color-text);
+}
+.ink-bubble--mine .ink-bubble__body {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
+/* The tail belongs to the run, not the message. Squaring the corner nearest
+   the sender on the last bubble is what makes four messages read as one turn. */
+.ink-bubble--theirs .ink-bubble__body[data-tail] { border-bottom-left-radius: var(--radius-sm); }
+.ink-bubble--mine .ink-bubble__body[data-tail] { border-bottom-right-radius: var(--radius-sm); }
+
+.ink-bubble[data-status="sending"] .ink-bubble__body { opacity: 0.6; }
+.ink-bubble[data-status="failed"] .ink-bubble__body { border-color: var(--color-destructive-fg); }
+
+.ink-bubble__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--ctl-px-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+.ink-bubble__failed { color: var(--color-destructive-fg); font-weight: var(--weight-bold); }
+
+.ink-typing { display: inline-flex; gap: 4px; align-items: center; height: var(--space-5); }
+.ink-typing span {
+  width: 6px; height: 6px; border-radius: var(--radius-pill);
+  background: var(--color-text-tertiary);
+  animation: ink-typing 1.2s ease-in-out infinite;
+}
+.ink-typing span:nth-child(2) { animation-delay: 0.15s; }
+.ink-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes ink-typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* ═══ Progress ring and dots ═══════════════════════════════════════════════ */
+
+.ink-progress { display: inline-block; }
+.ink-progress__track { stroke: var(--color-border); }
+.ink-progress__arc { stroke: var(--color-accent-line); transition: stroke-dasharray var(--dur-slow) var(--ink-ease); }
+.ink-progress--spin svg { animation: ink-spin 900ms linear infinite; }
+
+.ink-dots { display: inline-flex; gap: 3px; align-items: center; }
+.ink-dots span {
+  width: 5px; height: 5px; border-radius: var(--radius-pill);
+  background: currentColor;
+  animation: ink-typing 1.2s ease-in-out infinite;
+}
+.ink-dots span:nth-child(2) { animation-delay: 0.15s; }
+.ink-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-typing span, .ink-dots span { animation: none; opacity: 0.6; }
+  .ink-progress--spin svg { animation-duration: 3s; }
+  .ink-radio__dot::after, .ink-calendar__day, .ink-progress__arc { transition-duration: 1ms; }
+}
+
+/* ═══ Table: sorting and a sticky header ═══════════════════════════════════ */
+
+.ink-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ink-table__sort:hover { color: var(--color-text); }
+.ink-table__sort:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Only the sorted column shows an arrow. A column of grey chevrons that mostly
+   mean nothing teaches people to stop reading them. */
+.ink-table__arrow[data-dir] {
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+}
+.ink-table__arrow[data-dir="ascending"] { border-bottom: 5px solid var(--color-accent-line); }
+.ink-table__arrow[data-dir="descending"] { border-top: 5px solid var(--color-accent-line); }
+
+.ink-table--sticky { max-height: 60vh; overflow-y: auto; }
+.ink-table--sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  /* Opaque, or the rows scroll through it. The header is the one place in the
+     library where a solid fill is load-bearing rather than decorative. */
+  background: var(--color-surface);
 }

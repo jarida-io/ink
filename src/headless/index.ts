@@ -14,6 +14,9 @@
  * Nothing here imports anything. Zero dependencies, no DOM, no React.
  */
 export * from "./navbar.js";
+export * from "./nav.js";
+export * from "./calendar.js";
+export * from "./table.js";
 export * from "./roving.js";
 export * from "./toast.js";
 export * from "./slider.js";

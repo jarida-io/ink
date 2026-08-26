@@ -1,7 +1,8 @@
 /**
  * Layout, tabs and data, on native. Same names and props as the web renderer.
  */
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { ariaSort, nextSort, sortRows, type SortState } from "../headless/table.js";
 import { Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import type { SpaceStep } from "../tokens/space.js";
 import { useInkTheme } from "./InkProvider.js";
@@ -247,6 +248,8 @@ export interface InkColumn<Row> {
   render: (row: Row) => ReactNode;
   /** Native has no `table-layout`, so a column says how wide it is. */
   width?: number;
+  sortable?: boolean;
+  sortValue?: (row: Row) => string | number | null | undefined;
 }
 
 export function InkTable<Row>({
@@ -255,6 +258,9 @@ export function InkTable<Row>({
   rows,
   rowKey,
   empty,
+  sort,
+  onSortChange,
+  sticky = false,
   style,
 }: {
   caption: string;
@@ -262,9 +268,22 @@ export function InkTable<Row>({
   rows: Row[];
   rowKey: (row: Row) => string;
   empty?: ReactNode;
+  sort?: SortState | null;
+  onSortChange?: (sort: SortState | null) => void;
+  sticky?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useInkTheme();
+  const byKey = useMemo(() => new Map(columns.map((c) => [c.key, c])), [columns]);
+  const ordered = useMemo(
+    () =>
+      sortRows(rows, sort ?? null, (row, key) => {
+        const column = byKey.get(key);
+        return column?.sortValue ? column.sortValue(row) : undefined;
+      }),
+    [rows, sort, byKey],
+  );
+
   if (rows.length === 0 && empty) return <>{empty}</>;
 
   const head = inkText(theme, {
@@ -275,6 +294,71 @@ export function InkTable<Row>({
     uppercase: true,
     color: theme.color.textTertiary,
   });
+
+  const header = (
+    <View
+      style={{
+        flexDirection: "row",
+        borderBottomWidth: theme.edge.borderWidth,
+        borderColor: theme.color.edge,
+        backgroundColor: theme.color.surface,
+      }}
+    >
+      {columns.map((c) => {
+        const cell = (
+          <Text style={[head.style, c.numeric ? { textAlign: "right" } : null]}>{c.header}</Text>
+        );
+        return (
+          <View key={c.key} style={{ width: c.width ?? 140, padding: theme.space[3] }}>
+            {c.sortable ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${c.header}, ${ariaSort(sort ?? null, c.key)}`}
+                onPress={() => onSortChange?.(nextSort(sort ?? null, c.key))}
+                style={{ flexDirection: "row", alignItems: "center", gap: theme.space[1] }}
+              >
+                {cell}
+                {sort?.key === c.key ? (
+                  <View
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeftWidth: 4,
+                      borderRightWidth: 4,
+                      borderLeftColor: "transparent",
+                      borderRightColor: "transparent",
+                      ...(sort.direction === "ascending"
+                        ? { borderBottomWidth: 5, borderBottomColor: theme.color.accentLine }
+                        : { borderTopWidth: 5, borderTopColor: theme.color.accentLine }),
+                    }}
+                  />
+                ) : null}
+              </Pressable>
+            ) : (
+              cell
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+
+  const body = ordered.map((row, i) => (
+    <View
+      key={rowKey(row)}
+      style={{
+        flexDirection: "row",
+        borderTopWidth: i === 0 ? 0 : 1,
+        borderColor: theme.color.line,
+      }}
+    >
+      {columns.map((c) => (
+        <View key={c.key} style={{ width: c.width ?? 140, padding: theme.space[3] }}>
+          {c.render(row)}
+        </View>
+      ))}
+    </View>
+  ));
 
   return (
     <View
@@ -291,42 +375,19 @@ export function InkTable<Row>({
       ]}
     >
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View>
-          <View
-            style={{
-              flexDirection: "row",
-              borderBottomWidth: theme.edge.borderWidth,
-              borderColor: theme.color.edge,
-            }}
-          >
-            {columns.map((c) => (
-              <View
-                key={c.key}
-                style={{ width: c.width ?? 140, padding: theme.space[3] }}
-              >
-                <Text style={[head.style, c.numeric ? { textAlign: "right" } : null]}>
-                  {c.header}
-                </Text>
-              </View>
-            ))}
+        {/* Sticky is structural rather than a style: the header sits OUTSIDE
+            the vertical scroller, so it stays put because it is not in it. */}
+        {sticky ? (
+          <View>
+            {header}
+            <ScrollView>{body}</ScrollView>
           </View>
-          {rows.map((row, i) => (
-            <View
-              key={rowKey(row)}
-              style={{
-                flexDirection: "row",
-                borderTopWidth: i === 0 ? 0 : 1,
-                borderColor: theme.color.line,
-              }}
-            >
-              {columns.map((c) => (
-                <View key={c.key} style={{ width: c.width ?? 140, padding: theme.space[3] }}>
-                  {c.render(row)}
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
+        ) : (
+          <View>
+            {header}
+            {body}
+          </View>
+        )}
       </ScrollView>
     </View>
   );

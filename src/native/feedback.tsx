@@ -310,3 +310,138 @@ export function InkToaster({ children }: { children: ReactNode }) {
 export function useInkToast(): ToastApi {
   return useContext(ToastContext) ?? { show: () => {}, dismiss: () => {} };
 }
+
+/* ── Progress ring ─────────────────────────────────────────────────────────
+ *
+ * Two clipped halves, each holding a rotated bordered circle.
+ *
+ * The obvious implementation is an SVG arc, and `react-native-svg` is the
+ * obvious dependency — which this library does not take on a consumer's behalf
+ * for a single component. The half-and-half technique is older, uglier and
+ * needs nothing: below 50% only the right half's circle rotates; past it the
+ * right half is fully shown and the left one takes over.
+ */
+
+export function InkProgress({
+  value,
+  label,
+  size = 36,
+  thickness = 3,
+}: {
+  /** 0..1. Omit for indeterminate. */
+  value?: number;
+  label: string;
+  size?: number;
+  thickness?: number;
+}) {
+  const theme = useInkTheme();
+  const spin = useRef(new Animated.Value(0)).current;
+  const indeterminate = value === undefined || Number.isNaN(value);
+  const clamped = indeterminate ? 0.25 : Math.min(1, Math.max(0, value));
+
+  useEffect(() => {
+    if (indeterminate && theme.animate) {
+      Animated.loop(
+        Animated.timing(spin, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ).start();
+    }
+  }, [indeterminate, spin, theme.animate]);
+
+  const half = size / 2;
+  const ring: ViewStyle = {
+    position: "absolute",
+    width: size,
+    height: size,
+    borderRadius: half,
+    borderWidth: thickness,
+    borderColor: theme.color.accentLine,
+  };
+
+  // Each half shows 180 degrees of arc, so the fraction maps onto two sweeps.
+  const rightSweep = Math.min(clamped, 0.5) * 720 - 180;
+  const leftSweep = Math.max(0, clamped - 0.5) * 720 - 180;
+
+  const body = (
+    <View style={{ width: size, height: size }}>
+      {/* The unfilled track, whole. */}
+      <View
+        style={{
+          position: "absolute",
+          width: size,
+          height: size,
+          borderRadius: half,
+          borderWidth: thickness,
+          borderColor: theme.color.line,
+        }}
+      />
+      {/* Right half: clips its circle to the right side and rotates it in. */}
+      <View style={{ position: "absolute", left: half, width: half, height: size, overflow: "hidden" }}>
+        <View style={{ position: "absolute", right: 0, width: size, height: size }}>
+          <View style={[ring, { transform: [{ rotate: `${rightSweep}deg` }] }]} />
+        </View>
+      </View>
+      {/* Left half only participates past the halfway mark. */}
+      {clamped > 0.5 ? (
+        <View style={{ position: "absolute", width: half, height: size, overflow: "hidden" }}>
+          <View style={{ position: "absolute", width: size, height: size }}>
+            <View style={[ring, { transform: [{ rotate: `${leftSweep}deg` }] }]} />
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  return (
+    <Animated.View
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityState={indeterminate ? { busy: true } : undefined}
+      accessibilityValue={
+        indeterminate ? undefined : { min: 0, max: 100, now: Math.round(clamped * 100) }
+      }
+      style={
+        indeterminate
+          ? {
+              transform: [
+                { rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) },
+              ],
+            }
+          : undefined
+      }
+    >
+      {body}
+    </Animated.View>
+  );
+}
+
+/* ── Dots ──────────────────────────────────────────────────────────────────
+ *
+ * The smallest loader. For inline use where a spinner would be too loud.
+ */
+
+export function InkDots({ label }: { label: string }) {
+  const theme = useInkTheme();
+  const dot: ViewStyle = {
+    width: 5,
+    height: 5,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.textSecondary,
+  };
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityState={{ busy: true }}
+      style={{ flexDirection: "row", gap: 3, alignItems: "center" }}
+    >
+      <View style={dot} />
+      <View style={[dot, { opacity: 0.7 }]} />
+      <View style={[dot, { opacity: 0.4 }]} />
+    </View>
+  );
+}

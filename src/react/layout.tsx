@@ -1,7 +1,8 @@
 /**
  * Layout, tabs, and the two ways of showing rows of data.
  */
-import { useCallback, useRef, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, type ReactNode } from "react";
+import { ariaSort, nextSort, sortRows, type SortState } from "../headless/table.js";
 import type { SpaceStep } from "../tokens/space.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
@@ -234,6 +235,9 @@ export interface InkColumn<Row> {
   /** Right-aligned and tabular. Anything a reader compares down a column. */
   numeric?: boolean;
   render: (row: Row) => ReactNode;
+  /** Makes the header a button. Needs `sortValue` to know what to compare. */
+  sortable?: boolean;
+  sortValue?: (row: Row) => string | number | null | undefined;
 }
 
 export function InkTable<Row>({
@@ -242,6 +246,9 @@ export function InkTable<Row>({
   rows,
   rowKey,
   empty,
+  sort,
+  onSortChange,
+  sticky = false,
   className,
 }: {
   caption: string;
@@ -249,24 +256,63 @@ export function InkTable<Row>({
   rows: Row[];
   rowKey: (row: Row) => string;
   empty?: ReactNode;
+  /** Controlled. `null` is the order the rows arrived in. */
+  sort?: SortState | null;
+  onSortChange?: (sort: SortState | null) => void;
+  /** Header stays put while the body scrolls. */
+  sticky?: boolean;
   className?: string;
 }) {
+  const byKey = useMemo(() => new Map(columns.map((c) => [c.key, c])), [columns]);
+
+  const ordered = useMemo(
+    () =>
+      sortRows(rows, sort ?? null, (row, key) => {
+        const column = byKey.get(key);
+        return column?.sortValue ? column.sortValue(row) : undefined;
+      }),
+    [rows, sort, byKey],
+  );
+
   if (rows.length === 0 && empty) return <>{empty}</>;
+
   return (
-    <div className={cx("ink-table", className)}>
+    <div className={cx("ink-table", sticky && "ink-table--sticky", className)}>
       <table>
         <caption className="ink-eyebrow">{caption}</caption>
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.key} scope="col" data-numeric={c.numeric || undefined}>
-                {c.header}
+              <th
+                key={c.key}
+                scope="col"
+                data-numeric={c.numeric || undefined}
+                // The one attribute that makes a sortable table usable without
+                // sight: it says both that the column sorts and which way.
+                aria-sort={c.sortable ? ariaSort(sort ?? null, c.key) : undefined}
+              >
+                {c.sortable ? (
+                  <button
+                    type="button"
+                    className="ink-table__sort"
+                    onClick={() => onSortChange?.(nextSort(sort ?? null, c.key))}
+                  >
+                    {c.header}
+                    <span
+                      className="ink-table__arrow"
+                      data-dir={sort?.key === c.key ? sort.direction : undefined}
+                      aria-hidden="true"
+                    />
+                  </button>
+                ) : (
+                  c.header
+                )}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {ordered.map((row) => (
             <tr key={rowKey(row)}>
               {columns.map((c) => (
                 <td key={c.key} data-numeric={c.numeric || undefined}>

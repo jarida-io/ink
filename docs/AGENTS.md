@@ -164,8 +164,27 @@ Pure. No DOM, no React, no timers of its own.
 type NavbarStage = "expanded" | "condensed" | "collapsed";
 nextStage(current, { scrollY, delta }, config?): NavbarStage
 stageHasMaterial(stage): boolean
+titlePlacement(stage): "below" | "in-bar"
 new NavbarBehaviour(config?)   // .scrolled(y) .current() .set(s) .subscribe(fn) .configure(c)
 NAVBAR_DEFAULTS = { condenseAt: 24, collapseAt: 220, hysteresis: 32, revealAfter: 8, enabled: true }
+
+// Navigation shape
+fitBar(items, width): { shown, overflow, iconsOnly }   // caps at BAR_MAX (5)
+shapeFor(width): "bar" | "rail" | "sidebar"            // <640, <1024, else
+badgeText(badge): string | null                        // 0/false -> null, >99 -> "99+"
+
+// Calendar — civil dates, never `Date`
+monthGrid(year, month, opts): CalendarCell[][]   // always 6 weeks
+addDays / addMonths / dayOfWeek / daysInMonth / isLeapYear / compareDates / isSameDay
+moveFocus(date, key): CivilDate | null           // arrows, Page, Home/End
+timeOptions(stepMinutes): CivilTime[]            // step must divide 1440
+formatTime(time, hour12?): string
+toCivilDate(Date) / fromCivilDate(civil, time?)
+
+// Table
+nextSort(current, key): SortState | null   // asc -> desc -> UNSORTED
+ariaSort(current, key): "ascending" | "descending" | "none"
+sortRows(rows, sort, valueOf): Row[]       // stable, nullish last, natural order
 
 // Roving focus — tab lists, radio groups, toolbars
 rove(key, currentIndex, count, { disabled?, wrap?, orientation? }): number | null
@@ -189,6 +208,11 @@ type SliderScale = { min, max, step, length, thumb }
 - Entering a stage uses `threshold`; leaving uses `threshold - hysteresis`.
 - A `danger` toast is **never** auto-dismissed.
 - `rove` returns `null` for keys it does not own — let those through.
+- A bottom bar caps at 5; past that the **last slot becomes overflow**, it does
+  not squeeze. Labels come off on *label* width (72pt/slot), not target width.
+- `monthGrid` is always **six weeks**, so nothing under it jumps when paging.
+- The sort cycle is **three states**: ascending, descending, back to unsorted.
+- `nextSort` on a new column always starts ascending.
 
 ---
 
@@ -219,16 +243,69 @@ InkInput     { value, onChange, label?, placeholder?, invalid?, disabled?, type?
 InkTextArea  { value, onChange, label?, placeholder?, rows?=3, maxRows?=12, disabled? }
 InkSelect    { label, value, options[{value,label,disabled?}], onChange, disabled? }
 InkSlider    { value, onChange, min?=0, max?=100, step?=1, label, format?, disabled? }
+InkRangeSlider { value: [number, number], onChange, min?, max?, step?, label, format? }
+InkRadioGroup  { label, value, options[{value,label,description?,disabled?}], onChange }
+InkMenu        { label, trigger, items[{key,label,icon?,onPress?,tone?,separated?}], align? }
 ```
+
+**`InkRadioGroup` vs `InkSegmented`** — not a look, a question. A segment is for
+values that fit on a line; a radio is for choices that need explaining. Wanting a
+description on a segment means you wanted a radio group.
+
+**`InkMenu` vs `InkSelect`** — a menu is for *actions*, a select is for *values*.
+`InkSelect` uses the platform's own picker and is better at every part of it.
+
+### Dates and time
+```
+InkCalendar        { value?, onChange?, range?, onRangeChange?, today?, min?, max?,
+                     isDisabled?, weekStartsOn?=1, label? }
+InkDatePicker      { label, value, onChange, placeholder?, format?, ...InkCalendar }
+InkDateRangePicker { label, value: {start,end}, onChange, ...InkCalendar }
+InkTimePicker      { label, value, onChange, step?=15, hour12?=false }
+```
+
+Values are **civil dates**, not `Date`: `{ year, month (1-12), day }` and
+`{ hour (0-23), minute }`. Convert at the edge with `toCivilDate` /
+`fromCivilDate`. Never do day arithmetic on a timestamp — use `addDays`,
+`addMonths`, `monthGrid` from `@jarida/ink/headless`.
+
+### Chat
+```
+InkBubble      { mine?, position?="only"|"first"|"middle"|"last", author?, meta?, status? }
+InkBubbleGroup { label, messages[{id,mine?,author?,text,meta?,status?}] }
+InkTyping      { author? }
+```
+
+Prefer `InkBubbleGroup`. It computes each bubble's `position` from the run, and
+"is this the last message from this person" is exactly what a caller gets right
+on first render and wrong after an insert.
+
+### Forms
+```
+InkForm      { label, errors[{field,message}], onSubmit?, actions? }
+InkFormField { id, label, hint?, error?, required? }
+```
+
+`InkForm` is a layout and an error summary, not a validation library. The summary
+takes focus when errors appear and links each one to its field.
 
 ### Navigation
 ```
-InkNavbar { title?, lead?, trail?, actions?, variant?="sticky"|"floating"|"static",
-            collapse?=false, behaviour?, stage?, scrollTarget? (react),
+InkNavbar { title?, largeTitle?=false, lead?, trail?, actions?,
+            variant?="sticky"|"floating"|"static",
+            material?="auto"|"always"|"never", collapse?=false, collapsedBadge?,
+            behaviour?, stage?, onStageChange?, scrollTarget? (react),
             topInset?, blurComponent? (native) }
+InkBottomBar  { label, items, value, onChange, moreLabel?, moreIcon?, onMore?, bottomInset? (native) }
+InkSidebar    { label, sections[{label?,items}], value, onChange,
+                variant?="sidebar"|"rail", header?, footer?, onToggle? }
+InkNav        { width, shape?, ...InkSidebar|InkBottomBar }   // picks by width
 InkTabs       { label, value, tabs[{value,label,badge?,disabled?}], onChange }
 InkBreadcrumb { items[{label,onPress?}], max?=4 }
 ```
+
+A destination is `{ key, label, icon?, badge?, disabled? }`. `badge` is a number
+or `true`; **0 and false render nothing**, and anything over 99 becomes `99+`.
 
 ### Feedback & data
 ```
@@ -236,11 +313,14 @@ InkNotice     { tone?, icon? }
 InkMeter      { value?, label }          // omit value -> indeterminate
 InkBadge      { tone?, icon? }
 InkSpinner    { label, size?=18 }        // label is REQUIRED
+InkProgress   { value?, label, size?=36, thickness?=3 }   // ring; omit value -> indeterminate
+InkDots       { label }                  // the smallest loader
 InkSkeleton   { width?, height?=14, radius?, shimmer?=false }
 InkEmptyState { icon?, title, action? }
 InkAvatar     { name, src?, size?=32 }
 InkToaster    { }                        // wrap the app; useInkToast() to show
-InkTable      { caption, columns[{key,header,numeric?,render,width?}], rows, rowKey, empty? }
+InkTable      { caption, columns[{key,header,numeric?,render,width?,sortable?,sortValue?}],
+                rows, rowKey, empty?, sort?, onSortChange?, sticky? }
 InkList       { label, empty? }
 InkDialog     { open, onClose, title, description?, actions?, dismissible?=true }
 InkSheet      { open, onClose, title, side?="bottom"|"right"|"left" }
@@ -357,9 +437,12 @@ Do not add these; they were considered and refused. See
 
 - **Tooltip** — hover-only and long-press are not one component. Use
   `InkRow`'s `description`.
-- **Popover / dropdown menu** — needs a portal and a positioning engine React
-  Native lacks. Use `InkSheet`.
 - **Grid** — CSS Grid and Flexbox-only native share no model. Use `InkStack`.
-- **Date picker, charts, rich text, tree** — not design-system components.
+- **Charts, rich text, tree** — not design-system components.
 - **Icons** — `lucide-react` and `lucide-react-native` already agree; pass them
   as nodes.
+
+`InkMenu` and the date pickers used to be on this list. They are now in, with
+the platform difference stated rather than papered over: the menu is an anchored
+popover on the web and a sheet on native, and so are the pickers. A popover
+attached to a button ends up under the thumb that opened it.

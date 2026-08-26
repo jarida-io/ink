@@ -23,6 +23,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { hitSlop } from "../core/reach.js";
+import { valueAt } from "../headless/slider.js";
 import { useInkTheme } from "./InkProvider.js";
 import { InkChoice } from "./controls.js";
 import { InkSheet } from "./overlays.js";
@@ -392,6 +393,424 @@ export function InkSlider({
           borderColor: theme.color.edge,
         }}
       />
+    </View>
+  );
+}
+
+/* ── Radio group ───────────────────────────────────────────────────────────
+ *
+ * Distinct from `InkSegmented` by the question, not the look: a segment is for
+ * values that fit on a line, a radio is for choices that need explaining.
+ */
+
+export interface InkRadioOption<T extends string> {
+  value: T;
+  label: string;
+  description?: ReactNode;
+  disabled?: boolean;
+}
+
+export function InkRadioGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  style,
+}: {
+  label: string;
+  value: T;
+  options: InkRadioOption<T>[];
+  onChange: (value: T) => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useInkTheme();
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel={label} style={[{ gap: theme.space[1] }, style]}>
+      {options.map((option) => {
+        const on = option.value === value;
+        const title = inkText(theme, { size: "md", weight: theme.weight.semibold });
+        const desc = inkText(theme, { size: "sm", color: theme.color.textSecondary });
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on, disabled: option.disabled }}
+            disabled={option.disabled}
+            onPress={() => onChange(option.value)}
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              gap: theme.space[3],
+              minHeight: theme.touch.tapMin,
+              paddingVertical: theme.space[3],
+              paddingHorizontal: theme.space[3],
+              borderRadius: theme.radius.md,
+              opacity: option.disabled ? 0.5 : 1,
+            }}
+          >
+            <View
+              style={{
+                width: theme.space[5],
+                height: theme.space[5],
+                marginTop: 1,
+                borderWidth: theme.edge.borderWidth,
+                borderColor: theme.color.edge,
+                borderRadius: theme.radius.pill,
+                backgroundColor: theme.color.surface,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {on ? (
+                <View
+                  style={{
+                    width: theme.space[2],
+                    height: theme.space[2],
+                    borderRadius: theme.radius.pill,
+                    backgroundColor: theme.color.accent,
+                  }}
+                />
+              ) : null}
+            </View>
+            <View style={{ flexShrink: 1, gap: 2 }}>
+              <Text style={title.style}>{option.label}</Text>
+              {typeof option.description === "string" ? (
+                <Text style={desc.style}>{option.description}</Text>
+              ) : (
+                option.description
+              )}
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/* ── Menu ──────────────────────────────────────────────────────────────────
+ *
+ * A sheet, not an anchored popover. Anchoring is a pointer idiom: on a touch
+ * screen a menu attached to a button ends up under the thumb that opened it.
+ * The API matches the web binding so the same JSX compiles.
+ */
+
+export interface InkMenuItem {
+  key: string;
+  label: string;
+  icon?: ReactNode;
+  onPress?: () => void;
+  disabled?: boolean;
+  separated?: boolean;
+  tone?: "neutral" | "danger";
+}
+
+export function InkMenu({
+  label,
+  trigger,
+  items,
+  style,
+}: {
+  label: string;
+  trigger: (props: { onPress: () => void; expanded: boolean }) => ReactNode;
+  items: InkMenuItem[];
+  align?: "start" | "end";
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useInkTheme();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <View style={style}>
+      {trigger({ onPress: () => setOpen(true), expanded: open })}
+      <InkSheet open={open} onClose={() => setOpen(false)} title={label}>
+        <View style={{ gap: 2 }}>
+          {items.map((item) => (
+            <Pressable
+              key={item.key}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              accessibilityState={{ disabled: item.disabled }}
+              disabled={item.disabled}
+              onPress={() => {
+                item.onPress?.();
+                setOpen(false);
+              }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: theme.space[2],
+                minHeight: theme.touch.tapMin,
+                paddingHorizontal: theme.space[3],
+                borderRadius: theme.radius.sm,
+                borderTopWidth: item.separated ? theme.edge.hairlineWidth : 0,
+                borderColor: theme.color.line,
+                marginTop: item.separated ? theme.space[1] : 0,
+                opacity: item.disabled ? 0.45 : 1,
+              }}
+            >
+              {item.icon}
+              <Text
+                style={
+                  inkText(theme, {
+                    size: "base",
+                    weight: theme.weight.medium,
+                    color: item.tone === "danger" ? theme.color.dangerFg : theme.color.text,
+                  }).style
+                }
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </InkSheet>
+    </View>
+  );
+}
+
+/* ── Range slider ──────────────────────────────────────────────────────────
+ *
+ * Two thumbs on one track. The gesture claims whichever thumb is nearest where
+ * it started and keeps it for the whole drag — reassigning mid-drag is how a
+ * handle becomes the other handle and the value you were watching jumps.
+ *
+ * The ends clamp against each other rather than swapping, for the same reason.
+ */
+
+export function InkRangeSlider({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max = 100,
+  step = 1,
+  format,
+  disabled,
+  style,
+}: {
+  label: string;
+  value: [number, number];
+  onChange: (value: [number, number]) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  format?: (value: number) => string;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useInkTheme();
+  const [width, setWidth] = useState(0);
+  const THUMB = 20;
+
+  const latest = useRef({ value, width, min, max, step, onChange, disabled });
+  latest.current = { value, width, min, max, step, onChange, disabled };
+  const holding = useRef<0 | 1>(0);
+
+  const scale = () => ({
+    min: latest.current.min,
+    max: latest.current.max,
+    step: latest.current.step,
+    length: latest.current.width,
+    thumb: THUMB,
+  });
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !latest.current.disabled,
+      onMoveShouldSetPanResponder: () => !latest.current.disabled,
+      onPanResponderGrant: (event) => {
+        const at = valueAt(event.nativeEvent.locationX, scale());
+        const [low, high] = latest.current.value;
+        // Claimed once, at the start, and held for the whole gesture.
+        holding.current = Math.abs(at - low) <= Math.abs(at - high) ? 0 : 1;
+        commit(event.nativeEvent.locationX);
+      },
+      onPanResponderMove: (event) => commit(event.nativeEvent.locationX),
+    }),
+  ).current;
+
+  function commit(x: number) {
+    const s = latest.current;
+    const next = valueAt(x, scale());
+    const [low, high] = s.value;
+    if (holding.current === 0) {
+      const clamped = Math.min(next, high);
+      if (clamped !== low) s.onChange([clamped, high]);
+    } else {
+      const clamped = Math.max(next, low);
+      if (clamped !== high) s.onChange([low, clamped]);
+    }
+  }
+
+  const travel = Math.max(0, width - THUMB);
+  const span = max - min || 1;
+  const left = ((value[0] - min) / span) * travel;
+  const right = ((value[1] - min) / span) * travel;
+
+  return (
+    <View
+      accessibilityLabel={label}
+      accessibilityValue={{
+        min,
+        max,
+        text: format ? `${format(value[0])} to ${format(value[1])}` : `${value[0]} to ${value[1]}`,
+      }}
+      onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+      style={[{ height: 26, justifyContent: "center", opacity: disabled ? 0.5 : 1 }, style]}
+      {...responder.panHandlers}
+    >
+      <View
+        style={{
+          height: 6,
+          marginHorizontal: THUMB / 2,
+          borderRadius: theme.radius.pill,
+          backgroundColor: theme.color.line,
+          borderWidth: theme.edge.hairlineWidth,
+          borderColor: theme.color.edge,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: left + THUMB / 2,
+          width: Math.max(0, right - left),
+          height: 6,
+          backgroundColor: theme.color.accent,
+        }}
+      />
+      {[left, right].map((offset, i) => (
+        <View
+          key={i}
+          style={{
+            position: "absolute",
+            left: offset,
+            width: THUMB,
+            height: THUMB,
+            borderRadius: THUMB / 2,
+            backgroundColor: theme.color.surface,
+            borderWidth: theme.edge.borderWidth,
+            borderColor: theme.color.edge,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+/* ── Form ──────────────────────────────────────────────────────────────────
+ *
+ * A layout and an error summary, not a validation library. The summary is the
+ * part worth having: a form that fails silently, or scatters errors beside
+ * fields that are off-screen, is a form people abandon.
+ */
+
+export interface InkFormError {
+  field: string;
+  message: string;
+}
+
+export function InkForm({
+  label,
+  errors = [],
+  actions,
+  children,
+  style,
+}: {
+  label: string;
+  errors?: InkFormError[];
+  onSubmit?: () => void;
+  actions?: ReactNode;
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useInkTheme();
+  return (
+    <View accessibilityLabel={label} style={[{ gap: theme.space[6] }, style]}>
+      {errors.length > 0 ? (
+        <View
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+          style={{
+            gap: theme.space[2],
+            padding: theme.space[4],
+            borderWidth: theme.edge.borderWidth,
+            borderColor: theme.color.dangerFg,
+            borderRadius: theme.radius.md,
+            backgroundColor: theme.color.dangerSoft,
+          }}
+        >
+          <Text
+            style={
+              inkText(theme, { size: "md", weight: theme.weight.bold, color: theme.color.dangerFg }).style
+            }
+          >
+            {errors.length === 1 ? "One thing needs fixing" : `${errors.length} things need fixing`}
+          </Text>
+          {errors.map((error) => (
+            <Text
+              key={error.field}
+              style={inkText(theme, { size: "sm", color: theme.color.dangerFg }).style}
+            >
+              {error.message}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
+      <View style={{ gap: theme.space[5] }}>{children}</View>
+      {actions ? (
+        <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: theme.space[3] }}>
+          {actions}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+export function InkFormField({
+  label,
+  hint,
+  error,
+  required,
+  children,
+  style,
+}: {
+  id?: string;
+  label: string;
+  hint?: ReactNode;
+  error?: string;
+  required?: boolean;
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useInkTheme();
+  return (
+    <View style={[{ gap: theme.space[2] }, style]}>
+      <Text style={inkText(theme, { size: "md", weight: theme.weight.semibold }).style}>
+        {label}
+        {required ? (
+          // Spelled out. An asterisk is a convention nobody has been taught.
+          <Text style={inkText(theme, { size: "md", color: theme.color.textSecondary }).style}>
+            {" (required)"}
+          </Text>
+        ) : null}
+      </Text>
+      {typeof hint === "string" ? (
+        <Text style={inkText(theme, { size: "sm", color: theme.color.textSecondary }).style}>{hint}</Text>
+      ) : (
+        hint
+      )}
+      {children}
+      {error ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={
+            inkText(theme, { size: "sm", weight: theme.weight.semibold, color: theme.color.dangerFg }).style
+          }
+        >
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

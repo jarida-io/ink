@@ -48,7 +48,10 @@ why, so the next person does not spend a day rediscovering it.
 | `InkTabs` | **Shipped** | Roving tabindex on web, accessible tablist on both |
 | `InkSegmented` | **Shipped** | Radio group of choices — for values, where tabs are for views |
 | `InkBreadcrumb` | **Shipped** | Truncates from the middle, because the ends are the parts that mean anything |
-| Sidebar | **Deliberately out** | Every product's sidebar is its own information architecture. The parts it needs — `InkStack`, `InkChoice`, `InkDivider` — are all here |
+| `InkBottomBar` | **Shipped** | The phone shape. Caps at five and overflows the rest rather than squeezing |
+| `InkSidebar` | **Shipped** | And the rail: one component, because a rail is a sidebar with its labels off |
+| `InkNav` | **Shipped** | Picks a shape from a container width, not a media query |
+
 | Pagination | **Deliberately out** | An application concern: the page size, the URL shape and the loading strategy are all product decisions |
 
 ## Controls
@@ -63,7 +66,11 @@ why, so the next person does not spend a day rediscovering it.
 | `InkTextArea` | **Shipped** | Auto-growing, capped |
 | `InkSelect` | **Shipped** | The platform's own picker, in the house material |
 | `InkSlider` | **Shipped** | Was out of v1. Now built on pointer events and `PanResponder`, so the ink thumb survives the port |
-| Date / time picker | **Deliberately out** | Locale, calendar systems and the platform pickers diverge too far to share an API honestly |
+| `InkDatePicker` | **Shipped** | Civil dates, never a `Date`. Popover on the web, sheet on native |
+| `InkDateRangePicker` | **Shipped** | Two presses; a third starts over rather than extending ambiguously |
+| `InkTimePicker` | **Shipped** | A list at a step, not three spinners |
+| `InkRadioGroup` | **Shipped** | For choices that need explaining. A segment is for values that fit on a line |
+| `InkRangeSlider` | **Shipped** | Two thumbs that clamp rather than swap |
 | Rich text editor | **Deliberately out** | Not a design-system component |
 
 ## Feedback
@@ -86,14 +93,19 @@ why, so the next person does not spend a day rediscovering it.
 | `InkDialog` | **Shipped** | Focus trap and restore on web, `Modal` on native, same props |
 | `InkSheet` | **Shipped** | Edge-anchored: arrives from a direction, and a thumb can reach its top |
 | Tooltip | **Deliberately out** | Hover-only on web and long-press on native is not the same component. Use `InkRow`'s description, which is always visible and always read aloud |
-| Popover / menu | **Deliberately out** | Needs a portal and a positioning engine on web, and neither exists on native. `InkSheet` covers the same job with one behaviour |
+| `InkMenu` | **Shipped** | Anchored on the web, a sheet on native. For actions; `InkSelect` is for values |
 | Command palette | **Deliberately out** | A product feature |
 
 ## Data
 
 | | Status | Notes |
 |---|---|---|
-| `InkTable` | **Shipped** | Scrolls in its own container, never the page. Tabular numerals by default |
+| `InkTable` | **Shipped** | Sortable and stickable. Scrolls in its own container, never the page |
+| `InkBubble` | **Shipped** | Chat. The tail belongs to the run, not to every message |
+| `InkBubbleGroup` | **Shipped** | Works out each bubble's place in the run so the caller cannot get it wrong |
+| `InkForm` | **Shipped** | A layout and an error summary. Not a validation library |
+| `InkProgress` | **Shipped** | A ring, for where a bar does not fit |
+| `InkDots` | **Shipped** | The smallest loader |
 | `InkList` | **Shipped** | `InkRow`s with dividers and an empty state, which is the shape 90% of tables actually wanted |
 | Charts | **Deliberately out** | A charting library is a different library |
 | Tree | **Deliberately out** | One product needed one once |

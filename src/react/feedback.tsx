@@ -235,3 +235,82 @@ export function useInkToast(): ToastApi {
   }
   return api;
 }
+
+/* ── Progress ring ─────────────────────────────────────────────────────────
+ *
+ * A meter for the places a bar does not fit — beside an avatar, inside a
+ * button, on a tile. Same contract as `InkMeter`: omit `value` and it does not
+ * pretend to know, it paces.
+ *
+ * Drawn with two SVG circles and `stroke-dasharray` rather than a conic
+ * gradient, because a gradient cannot be given a round cap and a progress ring
+ * without one reads as a pie chart.
+ */
+
+export function InkProgress({
+  value,
+  label,
+  size = 36,
+  thickness = 3,
+}: {
+  /** 0..1. Omit for indeterminate. */
+  value?: number;
+  label: string;
+  size?: number;
+  thickness?: number;
+}) {
+  const indeterminate = value === undefined || Number.isNaN(value);
+  const clamped = indeterminate ? 0.25 : Math.min(1, Math.max(0, value));
+  const radius = (size - thickness) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <span
+      className={cx("ink-progress", indeterminate && "ink-progress--spin")}
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={indeterminate ? undefined : 0}
+      aria-valuemax={indeterminate ? undefined : 100}
+      aria-valuenow={indeterminate ? undefined : Math.round(clamped * 100)}
+      style={{ width: size, height: size }}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={thickness}
+          className="ink-progress__track"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={thickness}
+          strokeLinecap="round"
+          strokeDasharray={`${circumference * clamped} ${circumference}`}
+          // Start at twelve o'clock. An arc that begins at three reads as
+          // already part-finished.
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          className="ink-progress__arc"
+        />
+      </svg>
+    </span>
+  );
+}
+
+/* ── Dots ──────────────────────────────────────────────────────────────────
+ *
+ * The smallest loader. For inline use where a spinner would be too loud — in a
+ * button that is submitting, beside a row that is refreshing.
+ */
+
+export function InkDots({ label }: { label: string }) {
+  return (
+    <span className="ink-dots" role="status" aria-label={label}>
+      <span /><span /><span />
+    </span>
+  );
+}
