@@ -76,7 +76,8 @@
     "typecheck:native": "tsc -p tsconfig.native.json",
     "test": "vitest run",
     "verify": "npm run typecheck && npm run typecheck:native && npm run test",
-    "prepublishOnly": "npm run clean && npm run verify && npm run build"
+    "prepublishOnly": "npm run clean && npm run verify && npm run build",
+    "gallery": "npm run build && node scripts/build-gallery.mjs gallery.html"
   },
   "peerDependencies": {
     "react": ">=18",
