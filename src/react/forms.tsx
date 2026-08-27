@@ -7,8 +7,9 @@
  * `InkInput` is for names, phrases and search; `InkSegmented` or `InkSelect` is
  * for everything with a list behind it.
  */
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { isRovingKey, rove } from "../headless/roving.js";
+import { filterItems, highlight } from "../headless/filter.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -647,6 +648,355 @@ export function InkFormField({
           {error}
         </span>
       ) : null}
+    </div>
+  );
+}
+
+/* ── Search field ──────────────────────────────────────────────────────────
+ *
+ * A text input with three things a plain one lacks: a `search` type so the
+ * platform offers its own history, a clear button that appears only when there
+ * is something to clear, and Escape to empty it.
+ *
+ * Not debounced. Debouncing is a decision about a network, and a component that
+ * makes it for you is a component you have to fight when the data is local.
+ */
+
+export function InkSearchField({
+  value,
+  onChange,
+  label = "Search",
+  placeholder = "Search",
+  onSubmit,
+  disabled,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+  placeholder?: string;
+  onSubmit?: (value: string) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cx("ink-search", className)}>
+      <span className="ink-search__glass" aria-hidden="true" />
+      <input
+        type="search"
+        value={value}
+        disabled={disabled}
+        placeholder={placeholder}
+        aria-label={label}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && value) {
+            e.preventDefault();
+            onChange("");
+          }
+          if (e.key === "Enter") onSubmit?.(value);
+        }}
+      />
+      {value ? (
+        <button
+          type="button"
+          className="ink-search__clear"
+          aria-label="Clear search"
+          onClick={() => onChange("")}
+        >
+          &times;
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/* ── Autocomplete ──────────────────────────────────────────────────────────
+ *
+ * A search field over a known list. Ranking is `filterItems` from the headless
+ * layer: a prefix beats a word-start beats a mid-word match, so typing "se"
+ * offers "Settings" before "Voice sensitivity".
+ *
+ * `aria-activedescendant` rather than moving focus: the input keeps focus while
+ * the arrow keys walk the list, which is what lets someone keep typing.
+ */
+
+export function InkAutocomplete<T>({
+  label,
+  value,
+  onChange,
+  items,
+  labelOf,
+  onSelect,
+  placeholder,
+  limit = 8,
+  empty = "Nothing matches",
+  disabled,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  items: T[];
+  labelOf: (item: T) => string;
+  onSelect: (item: T) => void;
+  placeholder?: string;
+  limit?: number;
+  empty?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const matches = useMemo(
+    () => (value.trim() ? filterItems(items, value, labelOf, limit) : []),
+    [items, value, labelOf, limit],
+  );
+
+  const activeId = matches[active] ? `${id}-opt-${active}` : undefined;
+
+  return (
+    <div className={cx("ink-autocomplete", className)}>
+      <div className="ink-search">
+        <span className="ink-search__glass" aria-hidden="true" />
+        <input
+          type="text"
+          role="combobox"
+          aria-label={label}
+          aria-expanded={open && matches.length > 0}
+          aria-controls={`${id}-list`}
+          aria-autocomplete="list"
+          aria-activedescendant={activeId}
+          value={value}
+          disabled={disabled}
+          placeholder={placeholder}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setOpen(true);
+            setActive(0);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") return setOpen(false);
+            if (!matches.length) return;
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              e.preventDefault();
+              const step = e.key === "ArrowDown" ? 1 : -1;
+              setActive((a) => (a + step + matches.length) % matches.length);
+            }
+            if (e.key === "Enter" && matches[active]) {
+              e.preventDefault();
+              onSelect(matches[active].item);
+              setOpen(false);
+            }
+          }}
+        />
+      </div>
+
+      {open && value.trim() ? (
+        <ul className="ink-autocomplete__list" id={`${id}-list`} role="listbox" aria-label={label}>
+          {matches.length === 0 ? (
+            <li className="ink-autocomplete__empty">{empty}</li>
+          ) : (
+            matches.map((match, i) => (
+              <li
+                key={i}
+                id={`${id}-opt-${i}`}
+                role="option"
+                aria-selected={i === active}
+                className="ink-autocomplete__option"
+                // `mousedown` rather than `click`: the input's blur fires first
+                // and would close the list before a click could land.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onSelect(match.item);
+                  setOpen(false);
+                }}
+                onMouseEnter={() => setActive(i)}
+              >
+                {highlight(labelOf(match.item), match.ranges).map((part, j) =>
+                  part.match ? <mark key={j}>{part.text}</mark> : <span key={j}>{part.text}</span>,
+                )}
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/* ── Number field ──────────────────────────────────────────────────────────
+ *
+ * `type="text"` with `inputMode="numeric"`, not `type="number"`. A number input
+ * silently discards what it cannot parse, scrolls its value when the wheel
+ * passes over it, and hides the digits from a screen reader in some engines.
+ * The steppers are real buttons and the keyboard is the arrow keys.
+ */
+
+export function InkNumberField({
+  label,
+  value,
+  onChange,
+  min = -Infinity,
+  max = Infinity,
+  step = 1,
+  suffix,
+  disabled,
+  className,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  suffix?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const clamp = (n: number) => Math.min(max, Math.max(min, n));
+  const round = (n: number) => {
+    const places = (String(step).split(".")[1] ?? "").length;
+    return places ? Number(n.toFixed(places)) : n;
+  };
+
+  return (
+    <div className={cx("ink-number", className)} data-disabled={disabled || undefined}>
+      <button
+        type="button"
+        className="ink-number__step"
+        aria-label={`Decrease ${label}`}
+        disabled={disabled || value <= min}
+        onClick={() => onChange(clamp(round(value - step)))}
+      >
+        &minus;
+      </button>
+      <input
+        type="text"
+        inputMode="decimal"
+        aria-label={label}
+        value={String(value)}
+        disabled={disabled}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          if (e.target.value !== "" && !Number.isNaN(next)) onChange(clamp(next));
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowUp") { e.preventDefault(); onChange(clamp(round(value + step))); }
+          if (e.key === "ArrowDown") { e.preventDefault(); onChange(clamp(round(value - step))); }
+        }}
+      />
+      {suffix ? <span className="ink-number__suffix">{suffix}</span> : null}
+      <button
+        type="button"
+        className="ink-number__step"
+        aria-label={`Increase ${label}`}
+        disabled={disabled || value >= max}
+        onClick={() => onChange(clamp(round(value + step)))}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+/* ── Rating ────────────────────────────────────────────────────────────────
+ *
+ * A radio group wearing marks, which is what a rating is. Built that way rather
+ * than as a row of buttons because it gives the arrow keys, the single tab stop
+ * and the announced value for free.
+ *
+ * `readOnly` renders the same marks without any of the interaction, for showing
+ * a score rather than collecting one.
+ */
+
+export function InkRating({
+  label,
+  value,
+  onChange,
+  max = 5,
+  readOnly,
+  className,
+}: {
+  label: string;
+  value: number;
+  onChange?: (value: number) => void;
+  max?: number;
+  readOnly?: boolean;
+  className?: string;
+}) {
+  if (readOnly || !onChange) {
+    return (
+      <span
+        className={cx("ink-rating", "ink-rating--static", className)}
+        role="img"
+        aria-label={`${label}: ${value} out of ${max}`}
+      >
+        {Array.from({ length: max }, (_, i) => (
+          <span key={i} className="ink-rating__mark" data-on={i < value || undefined} aria-hidden="true" />
+        ))}
+      </span>
+    );
+  }
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cx("ink-rating", className)}
+      onKeyDown={(e) => {
+        const next = rove(e.key, value - 1, max, { orientation: "horizontal", wrap: false });
+        if (next === null) return;
+        e.preventDefault();
+        onChange(next + 1);
+      }}
+    >
+      {Array.from({ length: max }, (_, i) => (
+        <button
+          key={i}
+          type="button"
+          role="radio"
+          aria-checked={i + 1 === value}
+          aria-label={`${i + 1} out of ${max}`}
+          tabIndex={i + 1 === value || (value === 0 && i === 0) ? 0 : -1}
+          className="ink-rating__button"
+          onClick={() => onChange(i + 1 === value ? 0 : i + 1)}
+        >
+          <span className="ink-rating__mark" data-on={i < value || undefined} aria-hidden="true" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── Button group ──────────────────────────────────────────────────────────
+ *
+ * Buttons that share an edge. Purely presentational — it does not manage
+ * selection, because a group of *actions* has no selection and a group of
+ * *values* is `InkSegmented`.
+ */
+
+export function InkButtonGroup({
+  label,
+  orientation = "horizontal",
+  children,
+  className,
+}: {
+  label: string;
+  orientation?: "horizontal" | "vertical";
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cx("ink-btngroup", `ink-btngroup--${orientation}`, className)}
+    >
+      {children}
     </div>
   );
 }

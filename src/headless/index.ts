@@ -17,6 +17,8 @@ export * from "./navbar.js";
 export * from "./nav.js";
 export * from "./calendar.js";
 export * from "./table.js";
+export * from "./pagination.js";
+export * from "./filter.js";
 export * from "./roving.js";
 export * from "./toast.js";
 export * from "./slider.js";

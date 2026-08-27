@@ -18,7 +18,13 @@ describe("the stylesheet", () => {
     const declared = new Set(Object.keys(cssVariables(createTheme())));
     // Variables the stylesheet defines for itself, rather than reading from the
     // theme: tone is set per-element, and the lift is a local animation channel.
-    const local = new Set(["--ink-tone-fg", "--ink-tone-soft", "--ink-lift"]);
+    const local = new Set([
+      "--ink-tone-fg",
+      "--ink-tone-soft",
+      "--ink-lift",
+      // Set per instance by InkAvatarGroup, from its `size` prop.
+      "--ink-avatar-size",
+    ]);
     const missing = new Set<string>();
 
     for (const match of CSS.matchAll(/var\((--[a-z0-9-]+)/g)) {

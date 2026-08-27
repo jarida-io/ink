@@ -5,6 +5,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useId,
   useMemo,
   useState,
   type ReactNode,
@@ -311,6 +312,147 @@ export function InkDots({ label }: { label: string }) {
   return (
     <span className="ink-dots" role="status" aria-label={label}>
       <span /><span /><span />
+    </span>
+  );
+}
+
+/* ── Backdrop ──────────────────────────────────────────────────────────────
+ *
+ * A scrim over everything, for a blocking wait. Rare on purpose: a backdrop
+ * says "you can do nothing until this finishes", which is true far less often
+ * than it is used. Prefer a meter on the thing that is loading.
+ *
+ * It takes a label because a blocking wait with no explanation is the most
+ * frustrating state an interface has.
+ */
+
+export function InkBackdrop({
+  open,
+  label,
+  children,
+  onPress,
+}: {
+  open: boolean;
+  label: string;
+  children?: ReactNode;
+  /** Rarely right — only when the wait is genuinely cancellable. */
+  onPress?: () => void;
+}) {
+  return (
+    <div
+      className="ink-backdrop"
+      data-open={open || undefined}
+      aria-hidden={!open}
+      role={open ? "alertdialog" : undefined}
+      aria-label={open ? label : undefined}
+      aria-busy={open}
+      onClick={onPress}
+    >
+      <div className="ink-backdrop__body">
+        {children ?? <InkSpinner label={label} size={28} />}
+        <span className="ink-backdrop__label">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Avatar group ──────────────────────────────────────────────────────────
+ *
+ * Overlapping avatars with a count for the rest. The overflow is a number, not
+ * more faces: past four the faces stop being recognisable and start being
+ * texture, and a reader wanting to know *who* needs a list rather than a
+ * smaller circle.
+ */
+
+export function InkAvatarGroup({
+  label,
+  people,
+  max = 4,
+  size = 32,
+  className,
+}: {
+  label: string;
+  people: { name: string; src?: string }[];
+  max?: number;
+  size?: number;
+  className?: string;
+}) {
+  const shown = people.slice(0, max);
+  const rest = people.length - shown.length;
+
+  return (
+    <span
+      className={cx("ink-avatargroup", className)}
+      role="group"
+      aria-label={`${label}: ${people.map((p) => p.name).join(", ")}`}
+      style={{ ["--ink-avatar-size" as string]: `${size}px` }}
+    >
+      {shown.map((person) => (
+        <InkAvatar key={person.name} name={person.name} src={person.src} size={size} />
+      ))}
+      {rest > 0 ? (
+        <span
+          className="ink-avatar ink-avatargroup__rest"
+          style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}
+          aria-hidden="true"
+        >
+          +{rest}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────────────────
+ *
+ * This was deliberately absent, and the reason still stands: a hover-only
+ * affordance and a long-press one are not the same component, and a tooltip is
+ * the most commonly misused control in any library — it hides information a
+ * touch user and a keyboard user may never see.
+ *
+ * It is here because the alternative was people building a worse one. So it is
+ * built with the constraints made explicit rather than papered over:
+ *
+ * - It opens on **hover and focus**, never hover alone.
+ * - It is `aria-describedby`, so the content reaches a screen reader whether or
+ *   not the tooltip ever appears.
+ * - It never carries anything a reader *needs*. For that, use `InkRow`'s
+ *   description or `InkFormField`'s hint, which are always visible.
+ */
+
+export function InkTooltip({
+  content,
+  placement = "top",
+  children,
+  className,
+}: {
+  content: string;
+  placement?: "top" | "bottom";
+  children: ReactNode;
+  className?: string;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span
+      className={cx("ink-tooltip", className)}
+      data-placement={placement}
+      data-open={open || undefined}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+      // Escape closes it without moving focus — the reader wanted the control,
+      // not the label.
+      onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+    >
+      <span className="ink-tooltip__anchor" aria-describedby={id}>
+        {children}
+      </span>
+      <span role="tooltip" id={id} className="ink-tooltip__bubble">
+        {content}
+      </span>
     </span>
   );
 }

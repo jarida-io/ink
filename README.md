@@ -246,7 +246,7 @@ Pretending otherwise would mean shipping a style system nobody asked for.
 ## Testing
 
 ```bash
-npm run verify   # two type-checks, plus 234 tests
+npm run verify   # two type-checks, plus 266 tests
 npm run build    # dist/ with declarations, plus the stylesheet
 ```
 

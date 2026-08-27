@@ -98,4 +98,33 @@ export { InkBubble, InkBubbleGroup, InkTyping } from "./chat.js";
 export type { InkBubbleProps, InkBubbleMessage, BubblePosition } from "./chat.js";
 export { InkDialog, InkSheet } from "./overlays.js";
 export type { InkDialogProps } from "./overlays.js";
+export {
+  InkChip,
+  InkText,
+  InkLink,
+  InkSurface,
+  InkContainer,
+  InkListItem,
+  InkAccordion,
+  InkTimeline,
+  InkSearchField,
+  InkAutocomplete,
+  InkNumberField,
+  InkRating,
+  InkButtonGroup,
+  InkPagination,
+  InkStepper,
+  InkFab,
+  InkSpeedDial,
+  InkDrawer,
+  InkBackdrop,
+  InkAvatarGroup,
+  InkTooltip,
+} from "./extras.js";
+export type {
+  InkChipProps,
+  InkAccordionItem,
+  InkTimelineEntry,
+  InkStep,
+} from "./extras.js";
 export { InkBudget, useInkBudget } from "../shared/budget.js";

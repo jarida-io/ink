@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { BAR_MAX, badgeText, fitBar, shapeFor, type NavDestination } from "./nav.js";
+import {
+  BAR_MAX,
+  badgeText,
+  fitBar,
+  shapeFor,
+  sidebarSizeFor,
+  sidebarToggle,
+  sidebarWidth,
+  stepSidebar,
+  type NavDestination,
+} from "./nav.js";
 
 const make = (n: number): NavDestination[] =>
   Array.from({ length: n }, (_, i) => ({ key: `k${i}`, label: `Item ${i}` }));
@@ -79,5 +89,41 @@ describe("badges", () => {
   it("stops counting rather than widening the control", () => {
     expect(badgeText(100)).toBe("99+");
     expect(badgeText(2451)).toBe("99+");
+  });
+});
+
+describe("the sidebar ladder", () => {
+  it("steps one rung at a time and stops at the ends", () => {
+    expect(stepSidebar("full", "narrower")).toBe("rail");
+    expect(stepSidebar("rail", "narrower")).toBe("button");
+    expect(stepSidebar("button", "narrower")).toBe("hidden");
+    expect(stepSidebar("hidden", "narrower")).toBe("hidden");
+    expect(stepSidebar("full", "wider")).toBe("full");
+    expect(stepSidebar("button", "wider")).toBe("rail");
+  });
+
+  /**
+   * A single control that cycles four states is a control nobody can predict.
+   * The toggle moves between two chosen rungs and says which way it is going.
+   */
+  it("toggles between two chosen rungs, and names the direction", () => {
+    expect(sidebarToggle("full")).toEqual({ next: "rail", label: "Collapse navigation" });
+    expect(sidebarToggle("rail")).toEqual({ next: "full", label: "Expand navigation" });
+    expect(sidebarToggle("full", "button").next).toBe("button");
+    expect(sidebarToggle("button", "button").next).toBe("full");
+  });
+
+  it("gives only the inline rungs a layout width", () => {
+    expect(sidebarWidth("full")).toBeGreaterThan(sidebarWidth("rail"));
+    expect(sidebarWidth("button")).toBe(0);
+    expect(sidebarWidth("hidden")).toBe(0);
+  });
+
+  it("suggests a rung from width, leaving the drawer to the caller", () => {
+    // Below the bar breakpoint a sidebar should not be inline at all; that is a
+    // presentation decision, not a size one.
+    expect(sidebarSizeFor(390)).toBe("hidden");
+    expect(sidebarSizeFor(834)).toBe("rail");
+    expect(sidebarSizeFor(1440)).toBe("full");
   });
 });

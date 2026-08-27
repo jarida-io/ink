@@ -11,10 +11,33 @@
  */
 export { InkProvider, useInkTheme, usePrefersReducedMotion } from "./InkProvider.js";
 export type { InkProviderProps, InkProviderMode } from "./InkProvider.js";
-export { InkTitle, InkEyebrow, InkProse, InkBadge, InkNotice, InkMeter, InkStage } from "./primitives.js";
+export {
+  InkTitle,
+  InkEyebrow,
+  InkProse,
+  InkBadge,
+  InkNotice,
+  InkMeter,
+  InkStage,
+  InkChip,
+  InkText,
+  InkLink,
+  InkSurface,
+} from "./primitives.js";
+export type { InkChipProps } from "./primitives.js";
 export type { InkTitleProps, InkBadgeProps, InkNoticeProps, InkMeterProps } from "./primitives.js";
 export { InkNavbar } from "./InkNavbar.js";
-export { InkBottomBar, InkSidebar, InkNav } from "./navigation.js";
+export {
+  InkBottomBar,
+  InkSidebar,
+  InkNav,
+  InkPagination,
+  InkStepper,
+  InkFab,
+  InkSpeedDial,
+  InkDrawer,
+} from "./navigation.js";
+export type { InkStep } from "./navigation.js";
 export type {
   InkBottomBarProps,
   InkSidebarProps,
@@ -34,7 +57,19 @@ export type {
   InkSegmentedOption,
   InkSwitchProps,
 } from "./controls.js";
-export { InkStack, InkDivider, InkTabs, InkBreadcrumb, InkTable, InkList } from "./layout.js";
+export {
+  InkStack,
+  InkDivider,
+  InkTabs,
+  InkBreadcrumb,
+  InkTable,
+  InkList,
+  InkListItem,
+  InkContainer,
+  InkAccordion,
+  InkTimeline,
+} from "./layout.js";
+export type { InkAccordionItem, InkTimelineEntry } from "./layout.js";
 export type {
   InkStackProps,
   InkDividerProps,
@@ -51,6 +86,9 @@ export {
   InkToaster,
   InkProgress,
   InkDots,
+  InkBackdrop,
+  InkAvatarGroup,
+  InkTooltip,
   useInkToast,
   readingTime,
 } from "./feedback.js";
@@ -66,6 +104,11 @@ export {
   InkRangeSlider,
   InkForm,
   InkFormField,
+  InkSearchField,
+  InkAutocomplete,
+  InkNumberField,
+  InkRating,
+  InkButtonGroup,
 } from "./forms.js";
 export type {
   InkInputProps,

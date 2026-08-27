@@ -430,7 +430,16 @@ fs.writeFileSync("tokens.css",
 
 ---
 
-## 10. What is deliberately absent
+## 10. Against Material UI
+
+A component-by-component map is in [MUI-MAP.md](./MUI-MAP.md) — useful as a
+migration table and as a check that nothing obvious is missing. Where the two
+differ it is because Ink must run unchanged on React Native, or because MUI's
+component was doing two jobs and Ink split it (Text Field into input / textarea
+/ search; Typography by job rather than by tag; Progress into bar / ring /
+spinner / dots).
+
+## 11. What is deliberately absent
 
 Do not add these; they were considered and refused. See
 [INVENTORY.md](./INVENTORY.md).

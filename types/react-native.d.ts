@@ -100,6 +100,8 @@ declare module "react-native" {
     fontFamily?: string;
     fontSize?: number;
     fontStyle?: "normal" | "italic";
+    fontVariant?: string[];
+    textDecorationLine?: "none" | "underline" | "line-through" | "underline line-through";
     fontWeight?: number | string;
     letterSpacing?: number;
     lineHeight?: number;
@@ -131,6 +133,8 @@ declare module "react-native" {
     | "list"
     | "tab"
     | "tablist"
+    | "menu"
+    | "menuitem"
     | "progressbar"
     | "alert"
     | "summary";
@@ -152,6 +156,7 @@ declare module "react-native" {
 
   export interface AccessibilityProps {
     accessible?: boolean;
+    accessibilityHint?: string;
     accessibilityRole?: AccessibilityRole;
     accessibilityLabel?: string;
     accessibilityHint?: string;
@@ -184,6 +189,7 @@ declare module "react-native" {
 
   export interface PressableProps extends AccessibilityProps {
     onPress?: () => void;
+    onLongPress?: () => void;
     onPressIn?: () => void;
     onPressOut?: () => void;
     onLongPress?: () => void;
@@ -209,6 +215,7 @@ declare module "react-native" {
     keyboardType?: "default" | "email-address" | "numeric" | "url" | "web-search";
     onFocus?: () => void;
     onBlur?: () => void;
+    onSubmitEditing?: () => void;
     style?: StyleProp<TextStyle>;
     testID?: string;
   }

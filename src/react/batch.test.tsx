@@ -47,7 +47,7 @@ describe("sidebar", () => {
 
   it("gives a rail an accessible name for every destination", () => {
     // A rail has no visible label, so without this it is a column of mysteries.
-    render(<InkSidebar label="Main" sections={sections} value="all" onChange={() => {}} variant="rail" />);
+    render(<InkSidebar label="Main" sections={sections} value="all" onChange={() => {}} size="rail" />);
     expect(screen.getByRole("button", { name: "Everything" })).toBeTruthy();
     expect(screen.queryByText("Everything")).toBeNull();
   });

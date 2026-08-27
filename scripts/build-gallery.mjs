@@ -66,7 +66,15 @@ const calendar = `
   </div>
 </div>`;
 
-const componentCount = 53;
+// Counted from the built entry point rather than typed, so it cannot go stale
+// the way "16 components" did on the first version of this page.
+const reactEntry = readFileSync(resolve(ROOT, "src/react/index.ts"), "utf8");
+const componentCount = new Set(
+  [...reactEntry.matchAll(/^export\s+\{([^}]+)\}/gm)]
+    .flatMap((m) => m[1].split(","))
+    .map((n) => n.trim().split(/\s+as\s+/)[0].trim())
+    .filter((n) => n.startsWith("Ink")),
+).size;
 
 const html = `<title>Ink Components</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -156,6 +164,15 @@ section > h2 {
 .spec > .note code { font-size: 0.9em; }
 
 @media (max-width: 760px) { .spec { grid-template-columns: minmax(0, 1fr); } }
+
+/* The demo frame holds a fixed-width sidebar beside a flexible body, which is
+   wider than a phone. On a narrow screen it scrolls inside itself rather than
+   taking the page sideways with it — the same rule the components follow. */
+@media (max-width: 620px) {
+  .frame { overflow-x: auto; }
+  .frame > * { flex-shrink: 0; }
+  .frame__body { min-width: 260px; }
+}
 
 .row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-start; }
 .rowc { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
@@ -585,6 +602,222 @@ code {
     </div>
   </section>
 
+
+  <!-- ── Sidebar ladder ─────────────────────────────────────────────────── -->
+  <section id="sidebar">
+    <h2>The sidebar ladder</h2>
+    <p class="sec-note">Four rungs, not a boolean. <code>rail</code> and <code>button</code> are different answers to the same pressure and get confused constantly: a rail keeps every destination one press away and costs 68px; a button costs nothing and makes every destination two presses.</p>
+
+    <div class="spec">
+      <div class="demo">
+        <div class="rowc">
+          <div class="ink-btngroup ink-btngroup--horizontal" role="group" aria-label="Sidebar size">
+            <button class="ink-btn ink-btn--quiet" data-rung="full">full</button>
+            <button class="ink-btn ink-btn--quiet" data-rung="rail">rail</button>
+            <button class="ink-btn ink-btn--quiet" data-rung="button">button</button>
+            <button class="ink-btn ink-btn--quiet" data-rung="hidden">hidden</button>
+          </div>
+          <button class="ink-btn ink-btn--primary" id="openDrawer" style="min-height:var(--ctl-h-sm);padding:0 var(--ctl-px-sm)">Open as drawer</button>
+        </div>
+
+        <div class="frame" style="min-height:280px" id="ladderFrame">
+          <nav class="ink-glass ink-glass--vertical ink-sidebar ink-sidebar--floating" aria-label="Ladder" id="ladder" data-size="full">
+            <div class="ink-sidebar__head"><strong>Ink</strong></div>
+            <div class="ink-sidebar__body">
+              <div class="ink-sidebar__section">
+                <span class="ink-eyebrow ink-sidebar__sectionLabel">Library</span>
+                <button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>
+              </div>
+            </div>
+          </nav>
+          <button class="ink-glass ink-sidebar__puck" id="ladderPuck" hidden aria-label="Show navigation" style="position:absolute;margin:var(--space-4)"><span class="ink-navbar__puckMark"></span></button>
+          <div class="frame__body"><span class="ink-eyebrow" id="rungOut" style="color:#fff">full &mdash; 248px</span></div>
+        </div>
+      </div>
+      <div class="note">
+        <span class="ink-eyebrow">InkSidebar &middot; InkDrawer</span>
+        <p><strong>full</strong> labels and section headings. <strong>rail</strong> icons only, still one press away. <strong>button</strong> one control that brings it back. <strong>hidden</strong> gone, for content that wants the screen.</p>
+        <p><code>floating</code> insets it and rounds its corners so it reads as a panel over the content; <code>flush</code> runs to the edges and keeps its rule.</p>
+        <p>Press <em>Open as drawer</em> for the phone answer: the same navigation over the content, with a scrim that is a real button because a drawer whose only exit is its own toggle is one people get stuck in.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Text, chips, lists ─────────────────────────────────────────────── -->
+  <section id="text-and-chips" style="margin-bottom:var(--space-10)">
+    <h2>Text, chips &amp; lists</h2>
+    <p class="sec-note">A chip is a thing in its own right &mdash; a filter that is on, a tag, a recipient. A badge is a fact <em>about</em> something else and is never pressable. The difference is interaction, not size.</p>
+
+    <div class="spec">
+      <div class="demo">
+        <div class="rowc">
+          <span class="ink-chip" data-selected><span class="ink-chip__press"><span class="ink-chip__label">American</span></span></span>
+          <span class="ink-chip"><button class="ink-chip__press" type="button"><span class="ink-chip__label">British</span></button></span>
+          <span class="ink-chip ink-chip--removable"><span class="ink-chip__press"><span class="ink-chip__label">ada@example.com</span></span><button class="ink-chip__remove" type="button" aria-label="Remove ada@example.com">&times;</button></span>
+          <span class="ink-chip ink-chip--removable" data-selected style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)"><span class="ink-chip__press"><span class="ink-chip__label">Grade A</span></span><button class="ink-chip__remove" type="button" aria-label="Remove Grade A">&times;</button></span>
+        </div>
+
+        <div class="col">
+          <div class="ink-search" style="max-width:340px">
+            <span class="ink-search__glass" aria-hidden="true"></span>
+            <input type="search" placeholder="Search what it remembers" aria-label="Search" value="se" id="searchDemo">
+            <button class="ink-search__clear" type="button" aria-label="Clear search">&times;</button>
+          </div>
+        </div>
+
+        <div class="ink-edge ink-group" style="max-width:420px">
+          <header class="ink-group__head"><h2 class="ink-group__title">People</h2></header>
+          <div class="ink-list" role="list" aria-label="People">
+            <button class="ink-listitem ink-listitem--pressable" role="listitem" data-selected><span class="ink-listitem__lead"><span class="ink-avatar" role="img" aria-label="Ada Lovelace">AL</span></span><span class="ink-listitem__text"><span class="ink-listitem__title">Ada Lovelace</span><span class="ink-listitem__desc">Last seen this morning</span></span><span class="ink-listitem__trail">&rsaquo;</span></button>
+            <button class="ink-listitem ink-listitem--pressable" role="listitem"><span class="ink-listitem__lead"><span class="ink-avatar" role="img" aria-label="Grace Hopper">GH</span></span><span class="ink-listitem__text"><span class="ink-listitem__title">Grace Hopper</span><span class="ink-listitem__desc">Last seen on Tuesday</span></span><span class="ink-listitem__trail">&rsaquo;</span></button>
+          </div>
+        </div>
+
+        <div class="rowc">
+          <span class="ink-avatargroup" role="group" aria-label="On this file: Ada, Grace, Alan, Katherine, Jean" style="--ink-avatar-size:32px">
+            <span class="ink-avatar" role="img" aria-label="Ada">AL</span>
+            <span class="ink-avatar" role="img" aria-label="Grace">GH</span>
+            <span class="ink-avatar" role="img" aria-label="Alan">AT</span>
+            <span class="ink-avatar" role="img" aria-label="Katherine">KJ</span>
+            <span class="ink-avatar ink-avatargroup__rest" aria-hidden="true">+2</span>
+          </span>
+          <span class="ink-tooltip" data-placement="top" id="tipDemo">
+            <span class="ink-tooltip__anchor"><button class="ink-btn ink-btn--quiet" type="button" style="min-height:var(--ctl-h-sm);padding:0 var(--ctl-px-sm)">Hover me</button></span>
+            <span class="ink-tooltip__bubble" role="tooltip">Never put anything here a reader needs.</span>
+          </span>
+          <a class="ink-link" href="#text-and-chips">An inline link</a>
+          <a class="ink-link" href="#text-and-chips">External<span class="ink-link__external"></span></a>
+        </div>
+
+        <span class="ink-eyebrow">Autocomplete, shown open</span>
+          <div class="ink-autocomplete" style="max-width:340px;height:270px">
+            <div class="ink-search">
+              <span class="ink-search__glass" aria-hidden="true"></span>
+              <input type="text" role="combobox" aria-expanded="true" aria-label="Go to" value="se" readonly>
+            </div>
+            <ul class="ink-autocomplete__list" role="listbox" aria-label="Go to">
+              <li class="ink-autocomplete__option" role="option" aria-selected="true"><mark>Se</mark><span>ttings</span></li>
+              <li class="ink-autocomplete__option" role="option" aria-selected="false"><mark>Se</mark><span>ssions</span></li>
+              <li class="ink-autocomplete__option" role="option" aria-selected="false"><span>Voice </span><mark>se</mark><span>nsitivity</span></li>
+            </ul>
+          </div>
+      </div>
+      </div>
+      <div class="note">
+        <span class="ink-eyebrow">InkChip &middot; InkSearchField &middot; InkAutocomplete &middot; InkList &middot; InkListItem &middot; InkAvatarGroup &middot; InkTooltip &middot; InkLink</span>
+        <p>The remove control is separate from the chip. A chip that vanishes when you meant to select it is the worst outcome available.</p>
+        <p>Autocomplete ranks a prefix above a word-start above a mid-word match, so typing &ldquo;se&rdquo; offers Settings before Voice sensitivity. Array order is not an answer.</p>
+        <p>A list item is a <em>record</em> &mdash; lead, two lines, trail. <code>InkRow</code> is a <em>setting</em> &mdash; a label and one control.</p>
+        <p>Links are underlined. A link marked only by colour is invisible to a reader who cannot distinguish it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── More controls ──────────────────────────────────────────────────── -->
+  <section id="more-controls">
+    <h2>More controls</h2>
+
+    <div class="spec">
+      <div class="demo row">
+        <div class="col">
+          <span class="ink-eyebrow">Number field</span>
+          <div class="ink-number">
+            <button class="ink-number__step" type="button" aria-label="Decrease quantity">&minus;</button>
+            <input type="text" inputmode="decimal" value="12" aria-label="Quantity">
+            <button class="ink-number__step" type="button" aria-label="Increase quantity">+</button>
+          </div>
+          <span class="ink-eyebrow">Rating</span>
+          <div class="ink-rating" role="radiogroup" aria-label="Rating" id="rating">
+            <button class="ink-rating__button" type="button" role="radio" aria-checked="false" aria-label="1 out of 5"><span class="ink-rating__mark" data-on></span></button>
+            <button class="ink-rating__button" type="button" role="radio" aria-checked="false" aria-label="2 out of 5"><span class="ink-rating__mark" data-on></span></button>
+            <button class="ink-rating__button" type="button" role="radio" aria-checked="true" aria-label="3 out of 5"><span class="ink-rating__mark" data-on></span></button>
+            <button class="ink-rating__button" type="button" role="radio" aria-checked="false" aria-label="4 out of 5"><span class="ink-rating__mark"></span></button>
+            <button class="ink-rating__button" type="button" role="radio" aria-checked="false" aria-label="5 out of 5"><span class="ink-rating__mark"></span></button>
+          </div>
+          <span class="ink-eyebrow">Button group</span>
+          <div class="ink-btngroup ink-btngroup--horizontal" role="group" aria-label="Alignment">
+            <button class="ink-btn ink-btn--quiet" type="button">Left</button>
+            <button class="ink-btn ink-btn--quiet" type="button">Centre</button>
+            <button class="ink-btn ink-btn--quiet" type="button">Right</button>
+          </div>
+        </div>
+
+        <div class="col" style="flex:1;min-width:280px">
+          <span class="ink-eyebrow">Accordion</span>
+          <div class="ink-accordion" role="group" aria-label="Questions">
+            <details class="ink-accordion__item" open>
+              <summary class="ink-accordion__head"><span class="ink-accordion__title">Where does the edge come from?</span><span class="ink-accordion__chev"></span></summary>
+              <div class="ink-accordion__body">A 2px border printed 4px above a hard plate. Built on the platform <code>&lt;details&gt;</code>, so find-in-page reaches inside a closed panel.</div>
+            </details>
+            <details class="ink-accordion__item">
+              <summary class="ink-accordion__head"><span class="ink-accordion__title">Why no icon set?</span><span class="ink-accordion__meta">optional</span><span class="ink-accordion__chev"></span></summary>
+              <div class="ink-accordion__body">lucide-react and lucide-react-native already agree. Every mark this library needs, it draws.</div>
+            </details>
+          </div>
+          <span class="ink-eyebrow">Timeline</span>
+          <ol class="ink-timeline" aria-label="Progress">
+            <li class="ink-timeline__entry" data-state="done"><span class="ink-timeline__marker"></span><div class="ink-timeline__body"><span class="ink-eyebrow">09:02</span><span class="ink-timeline__title">Export queued</span></div></li>
+            <li class="ink-timeline__entry" data-state="current"><span class="ink-timeline__marker"></span><div class="ink-timeline__body"><span class="ink-eyebrow">09:10</span><span class="ink-timeline__title">Writing files</span><span class="ink-prose">About four minutes left.</span></div></li>
+            <li class="ink-timeline__entry" data-state="todo"><span class="ink-timeline__marker"></span><div class="ink-timeline__body"><span class="ink-timeline__title">Verify</span></div></li>
+          </ol>
+        </div>
+      </div>
+      <div class="note">
+        <span class="ink-eyebrow">InkNumberField &middot; InkRating &middot; InkButtonGroup &middot; InkAccordion &middot; InkTimeline</span>
+        <p>The number field is <code>type="text"</code> with a numeric keypad, not <code>type="number"</code> &mdash; which silently discards what it cannot parse and scrolls its value when the wheel passes over it.</p>
+        <p>The rating is a radio group wearing marks, which is what a rating is: arrow keys, one tab stop and an announced value for free.</p>
+        <p>The accordion is <code>&lt;details&gt;</code>. Find-in-page reaching inside a closed panel is the thing a hand-rolled one loses that people notice.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Progress through things ────────────────────────────────────────── -->
+  <section id="progress">
+    <h2>Getting somewhere</h2>
+
+    <div class="spec">
+      <div class="demo">
+        <ol class="ink-stepper ink-stepper--horizontal" aria-label="Setup">
+          <li class="ink-stepper__step" data-state="done"><button class="ink-stepper__body" type="button"><span class="ink-stepper__marker"><span class="ink-stepper__tick"></span></span><span class="ink-stepper__text"><span class="ink-stepper__label">Account</span></span></button></li>
+          <li class="ink-stepper__step" data-state="done"><button class="ink-stepper__body" type="button"><span class="ink-stepper__marker"><span class="ink-stepper__tick"></span></span><span class="ink-stepper__text"><span class="ink-stepper__label">Voice</span></span></button></li>
+          <li class="ink-stepper__step" data-state="current"><div class="ink-stepper__body" aria-current="step"><span class="ink-stepper__marker">3</span><span class="ink-stepper__text"><span class="ink-stepper__label">Rooms</span><span class="ink-stepper__desc">Where things are</span></span></div></li>
+          <li class="ink-stepper__step" data-state="todo"><div class="ink-stepper__body"><span class="ink-stepper__marker">4</span><span class="ink-stepper__text"><span class="ink-stepper__label">Finish</span></span></div></li>
+        </ol>
+
+        <nav class="ink-pagination" aria-label="Pagination" id="pager">
+          <button class="ink-pagination__step" type="button" aria-label="Previous page"><span class="ink-calendar__chev" data-dir="prev"></span></button>
+          <button class="ink-pagination__page" type="button" aria-label="Page 1">1</button>
+          <span class="ink-pagination__gap">&hellip;</span>
+          <button class="ink-pagination__page" type="button" aria-label="Page 11">11</button>
+          <button class="ink-pagination__page" type="button" aria-label="Page 12" aria-current="page">12</button>
+          <button class="ink-pagination__page" type="button" aria-label="Page 13">13</button>
+          <span class="ink-pagination__gap">&hellip;</span>
+          <button class="ink-pagination__page" type="button" aria-label="Page 40">40</button>
+          <button class="ink-pagination__step" type="button" aria-label="Next page"><span class="ink-calendar__chev" data-dir="next"></span></button>
+        </nav>
+
+        <div class="rowc" style="gap:var(--space-8)">
+          <button class="ink-fab" type="button" data-position="static" aria-label="New conversation"><span class="ink-fab__plus"></span></button>
+          <button class="ink-fab ink-fab--extended" type="button" data-position="static"><span class="ink-fab__plus"></span><span class="ink-fab__label">New conversation</span></button>
+          <div class="ink-speeddial" data-position="static" data-open id="dial">
+            <div class="ink-speeddial__actions" role="menu" aria-label="Create">
+              <button class="ink-speeddial__action" type="button" role="menuitem"><span class="ink-speeddial__actionLabel">Note</span><span class="ink-speeddial__actionIcon">◇</span></button>
+              <button class="ink-speeddial__action" type="button" role="menuitem"><span class="ink-speeddial__actionLabel">Routine</span><span class="ink-speeddial__actionIcon">◆</span></button>
+            </div>
+            <button class="ink-fab" type="button" aria-label="Create" aria-expanded="true"><span class="ink-fab__plus"></span></button>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <span class="ink-eyebrow">InkStepper &middot; InkPagination &middot; InkFab &middot; InkSpeedDial</span>
+        <p>A completed step is pressable and a future one is not. Going back is always allowed; skipping ahead is the product&rsquo;s decision and it has to say so.</p>
+        <p>The pagination keeps a <strong>constant width</strong> wherever the page is. Clamping the window naively collapses it at the ends, so the &ldquo;next&rdquo; button moves between clicks and the reader chases it.</p>
+        <p>A fab wears the edge, because it is the thing the screen is <em>for</em> &mdash; content rather than chrome, and the one floating control that earns the plate.</p>
+      </div>
+    </div>
+  </section>
+
   <footer style="margin-top:var(--space-16);padding-top:var(--space-6);border-top:var(--ink-border-width) solid var(--color-text)">
     <p class="ink-prose"><strong>Ink</strong> &mdash; ${componentCount} components on React and React Native, zero runtime dependencies. Generated from <code>dist/</code>.</p>
   </footer>
@@ -690,6 +923,64 @@ document.querySelectorAll('[role="switch"]').forEach(function (s) {
     document.getElementById(id).addEventListener("click", function () { at = 0; paint(); });
   });
   paint();
+})();
+
+// ── The sidebar ladder ─────────────────────────────────────────────────────
+(function () {
+  var side = document.getElementById("ladder");
+  var puck = document.getElementById("ladderPuck");
+  var out = document.getElementById("rungOut");
+  var widths = { full: "248px", rail: "68px", button: "0", hidden: "0" };
+  document.querySelectorAll("[data-rung]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var rung = b.dataset.rung;
+      side.dataset.size = rung;
+      side.classList.toggle("ink-sidebar--rail", rung === "rail");
+      side.hidden = rung === "button" || rung === "hidden";
+      puck.hidden = rung !== "button";
+      out.textContent = rung + " — " + widths[rung];
+    });
+  });
+  puck.addEventListener("click", function () {
+    document.querySelector('[data-rung="full"]').click();
+  });
+})();
+
+// ── Drawer ─────────────────────────────────────────────────────────────────
+(function () {
+  var open = document.getElementById("openDrawer");
+  if (!open) return;
+  var drawer = document.createElement("div");
+  drawer.className = "ink-drawer ink-drawer--start";
+  drawer.innerHTML =
+    '<button class="ink-drawer__scrim" type="button" aria-label="Close navigation"></button>' +
+    '<aside class="ink-glass ink-drawer__panel" aria-label="Navigation">' +
+    '<span class="ink-eyebrow">Navigation</span>' +
+    '<button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>' +
+    '<button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>' +
+    "</aside>";
+  document.body.appendChild(drawer);
+  function close() { delete drawer.dataset.open; drawer.setAttribute("aria-hidden", "true"); }
+  open.addEventListener("click", function () { drawer.dataset.open = ""; drawer.removeAttribute("aria-hidden"); });
+  drawer.querySelector(".ink-drawer__scrim").addEventListener("click", close);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+  close();
+})();
+
+// ── Rating ─────────────────────────────────────────────────────────────────
+(function () {
+  var group = document.getElementById("rating");
+  if (!group) return;
+  var buttons = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'));
+  buttons.forEach(function (b, i) {
+    b.addEventListener("click", function () {
+      buttons.forEach(function (other, j) {
+        other.setAttribute("aria-checked", String(j === i));
+        var mark = other.querySelector(".ink-rating__mark");
+        if (j <= i) mark.setAttribute("data-on", ""); else mark.removeAttribute("data-on");
+      });
+    });
+  });
 })();
 
 // ── Rail toggle ────────────────────────────────────────────────────────────

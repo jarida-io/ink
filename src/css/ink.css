@@ -351,8 +351,8 @@
   font-weight: var(--weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: var(--ink-tone-soft);
-  color: var(--ink-tone-fg);
+  background: var(--ink-tone-soft, var(--color-neutral-soft));
+  color: var(--ink-tone-fg, var(--color-text-secondary));
 }
 
 /* ── Stage: a quiet inset ────────────────────────────────────────────────── *
@@ -381,10 +381,10 @@
   gap: var(--space-2);
   margin: 0;
   padding: var(--ctl-py-sm) var(--ctl-px-sm);
-  border: var(--ink-hairline-width) solid var(--ink-tone-fg);
+  border: var(--ink-hairline-width) solid var(--ink-tone-fg, var(--color-text-secondary));
   border-radius: var(--radius-sm);
-  background: var(--ink-tone-soft);
-  color: var(--ink-tone-fg);
+  background: var(--ink-tone-soft, var(--color-neutral-soft));
+  color: var(--ink-tone-fg, var(--color-text-secondary));
   font-size: var(--text-sm);
   line-height: var(--leading-base);
 }
@@ -1021,6 +1021,12 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  /* A default size, so markup written by hand against these classes is not a
+     collapsed dot. The components pass an explicit width and height from their
+     `size` prop, which wins; this is the floor under everyone else. */
+  width: var(--ink-avatar-size, 32px);
+  height: var(--ink-avatar-size, 32px);
+  font-size: calc(var(--ink-avatar-size, 32px) * 0.38);
   border-radius: 50%;
   overflow: hidden;
   background: var(--color-border);
@@ -1067,7 +1073,7 @@
   padding: 0;
   font: inherit;
   font-weight: var(--weight-bold);
-  color: var(--ink-tone-fg);
+  color: var(--ink-tone-fg, var(--color-text-secondary));
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -1682,7 +1688,15 @@
   border: var(--ink-border-width) solid var(--color-text);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
+  /* Sized to its content, but never wider than what it is given.
+     Seven columns at the 44px touch floor plus the card's padding is 356px,
+     which does not fit a 390px phone once the page has its own gutters — so
+     the calendar pushed the whole page sideways. Below that width the cells
+     give up some of the floor rather than the page giving up its layout: a
+     target that is a few pixels small is worse than one you cannot reach at
+     all, but both are better than a page that scrolls sideways. */
   width: max-content;
+  max-width: 100%;
 }
 
 .ink-calendar__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
@@ -1720,6 +1734,7 @@
 .ink-calendar__weekday {
   display: grid;
   place-items: center;
+  min-width: 0;
   height: var(--space-6);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -1731,8 +1746,13 @@
 
 .ink-calendar__day {
   position: relative;
-  width: var(--ctl-h-md);
-  height: var(--ctl-h-md);
+  /* The row is `repeat(7, 1fr)`, so the cell follows the column rather than
+     forcing it. `aspect-ratio` keeps it square as it shrinks. */
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
+  min-height: var(--ctl-h-sm);
+  max-height: var(--ctl-h-md);
   display: grid;
   place-items: center;
   padding: 0;
@@ -2021,4 +2041,573 @@
   /* Opaque, or the rows scroll through it. The header is the one place in the
      library where a solid fill is load-bearing rather than decorative. */
   background: var(--color-surface);
+}
+
+/* ═══ Sidebar: the rest of the ladder ══════════════════════════════════════ */
+
+/* `floating` insets it and rounds it, so it reads as a panel over the content
+   rather than a column of it. `flush` runs to the edges and keeps its rule. */
+.ink-sidebar--floating {
+  height: auto;
+  margin: var(--space-3);
+  border: var(--ink-hairline-width) solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 6px 24px rgba(23, 22, 22, 0.08);
+}
+.ink-sidebar--floating .ink-sidebar__body { padding-right: 2px; }
+
+/* The `button` rung: no sidebar at all, one control that brings it back. */
+.ink-sidebar__puck {
+  position: fixed;
+  top: max(var(--space-4), env(safe-area-inset-top, 0px));
+  left: var(--space-4);
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ctl-h-md);
+  height: var(--ctl-h-md);
+  padding: 0;
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ink-sidebar__puck:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+/* ── Overlay: the phone answer, and the fullscreen one ─────────────────────
+ *
+ * A drawer over the content with a scrim. The scrim is a real button rather
+ * than a div with a handler: a drawer whose only exit is the toggle is a
+ * drawer people get stuck in, and a keyboard needs somewhere to land.
+ */
+.ink-sidebar__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  pointer-events: none;
+  visibility: hidden;
+  transition: visibility 0s var(--dur-base);
+}
+.ink-sidebar__overlay[data-open] { pointer-events: auto; visibility: visible; transition: visibility 0s; }
+
+.ink-sidebar__scrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(23, 22, 22, 0.42);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity var(--dur-base) ease;
+}
+.ink-sidebar__overlay[data-open] .ink-sidebar__scrim { opacity: 1; }
+
+.ink-sidebar--overlay {
+  position: relative;
+  height: 100%;
+  transform: translateX(-100%);
+  transition: transform var(--dur-slow) var(--ink-ease), width var(--dur-slow) var(--ink-ease);
+}
+.ink-sidebar__overlay[data-open] .ink-sidebar--overlay { transform: translateX(0); }
+
+/* Fullscreen: the whole width, for a phone or a navigation-first screen. */
+.ink-sidebar--overlay[data-size="full"] { width: min(var(--ink-nav-sidebar), 86vw); }
+.ink-sidebar--overlay[data-size="hidden"] { width: 100%; max-width: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-sidebar--overlay, .ink-sidebar__scrim { transition-duration: 1ms; }
+}
+
+/* ═══ Search & autocomplete ════════════════════════════════════════════════ */
+
+.ink-search {
+  display: flex;
+  align-items: center;
+  gap: var(--ctl-gap-sm);
+  min-height: var(--ctl-h-md);
+  padding: 0 var(--ctl-px-sm);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  transition: border-color var(--dur-base) ease, box-shadow var(--dur-base) ease;
+}
+.ink-search:focus-within { border-color: var(--color-accent-line); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.ink-search input {
+  flex: 1 1 auto; min-width: 0;
+  border: none; background: none; padding: 0;
+  font-family: var(--font-body); font-size: var(--text-md); color: var(--color-text);
+}
+.ink-search input:focus { outline: none; }
+.ink-search input::placeholder { color: var(--color-text-tertiary); }
+.ink-search input::-webkit-search-cancel-button { display: none; }
+
+/* Drawn rather than imported, so the library needs no icon set of its own. */
+.ink-search__glass {
+  flex-shrink: 0;
+  width: 12px; height: 12px;
+  border: var(--ink-border-width) solid var(--color-text-tertiary);
+  border-radius: var(--radius-pill);
+  position: relative;
+}
+.ink-search__glass::after {
+  content: ""; position: absolute; right: -4px; bottom: -3px;
+  width: 6px; height: 2px; border-radius: 1px;
+  background: var(--color-text-tertiary);
+  transform: rotate(45deg);
+}
+.ink-search__clear {
+  flex-shrink: 0; width: var(--space-5); height: var(--space-5);
+  display: grid; place-items: center; padding: 0;
+  border: none; border-radius: var(--radius-pill);
+  background: var(--color-border); color: var(--color-text-secondary);
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+.ink-search__clear:hover { background: var(--color-border-strong); color: var(--color-text); }
+
+.ink-autocomplete { position: relative; }
+.ink-autocomplete__list {
+  position: absolute; top: calc(100% + var(--space-2)); left: 0; right: 0; z-index: 50;
+  margin: 0; padding: var(--space-1); list-style: none;
+  max-height: 280px; overflow-y: auto;
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--ctl-r-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-ink);
+}
+.ink-autocomplete__option {
+  min-height: var(--ctl-h-md); display: flex; align-items: center;
+  padding: 0 var(--ctl-px-sm); border-radius: var(--ctl-r-sm);
+  font-size: var(--text-base); cursor: pointer;
+}
+.ink-autocomplete__option[aria-selected="true"] { background: var(--color-accent-soft); }
+.ink-autocomplete__option mark { background: none; color: var(--color-accent-line); font-weight: var(--weight-bold); }
+.ink-autocomplete__empty { padding: var(--ctl-py-md) var(--ctl-px-sm); font-size: var(--text-sm); color: var(--color-text-secondary); }
+
+/* ═══ Number field ═════════════════════════════════════════════════════════ */
+
+.ink-number {
+  display: inline-flex; align-items: center;
+  min-height: var(--ctl-h-md);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  border-radius: var(--ctl-r-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.ink-number[data-disabled] { opacity: 0.5; }
+.ink-number:focus-within { border-color: var(--color-accent-line); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.ink-number input {
+  width: 4ch; min-width: 0; flex: 1 1 auto;
+  border: none; background: none; padding: 0;
+  text-align: center;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: var(--text-md); color: var(--color-text);
+}
+.ink-number input:focus { outline: none; }
+.ink-number__suffix { padding-right: var(--space-2); font-size: var(--text-sm); color: var(--color-text-secondary); }
+.ink-number__step {
+  width: var(--ctl-h-md); height: var(--ctl-h-md); flex-shrink: 0;
+  display: grid; place-items: center; padding: 0;
+  border: none; background: none;
+  color: var(--color-text-secondary); font-size: 16px; cursor: pointer;
+}
+.ink-number__step:hover:not(:disabled) { background: var(--color-hover); color: var(--color-text); }
+.ink-number__step:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ═══ Rating ═══════════════════════════════════════════════════════════════ */
+
+.ink-rating { display: inline-flex; gap: 2px; align-items: center; }
+.ink-rating__button {
+  width: var(--ctl-h-sm); height: var(--ctl-h-sm);
+  display: grid; place-items: center; padding: 0;
+  border: none; background: none; cursor: pointer;
+  border-radius: var(--ctl-r-sm);
+}
+.ink-rating__button:hover { background: var(--color-hover); }
+.ink-rating__button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+
+/* A ring that fills, rather than a star — the library draws its own marks so it
+   needs no icon set, and a filled ring is unambiguous at 14px where a star is
+   a smudge. */
+.ink-rating__mark {
+  width: 14px; height: 14px;
+  border: var(--ink-border-width) solid var(--color-text-tertiary);
+  border-radius: var(--radius-pill);
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.ink-rating__mark[data-on] { background: var(--color-accent); border-color: var(--color-text); }
+.ink-rating--static { gap: 3px; }
+
+/* ═══ Button group ═════════════════════════════════════════════════════════
+ * Buttons that share an edge: the radii collapse inward and the borders merge
+ * so the group reads as one control rather than three that happen to touch. */
+
+.ink-btngroup { display: inline-flex; }
+.ink-btngroup--vertical { flex-direction: column; }
+
+.ink-btngroup > .ink-btn { border-radius: 0; }
+.ink-btngroup--horizontal > .ink-btn:first-child { border-start-start-radius: var(--ctl-r-md); border-end-start-radius: var(--ctl-r-md); }
+.ink-btngroup--horizontal > .ink-btn:last-child { border-start-end-radius: var(--ctl-r-md); border-end-end-radius: var(--ctl-r-md); }
+.ink-btngroup--horizontal > .ink-btn + .ink-btn { margin-left: calc(var(--ink-border-width) * -1); }
+.ink-btngroup--vertical > .ink-btn:first-child { border-start-start-radius: var(--ctl-r-md); border-start-end-radius: var(--ctl-r-md); }
+.ink-btngroup--vertical > .ink-btn:last-child { border-end-start-radius: var(--ctl-r-md); border-end-end-radius: var(--ctl-r-md); }
+.ink-btngroup--vertical > .ink-btn + .ink-btn { margin-top: calc(var(--ink-border-width) * -1); }
+/* The hovered one comes forward so its whole border is visible. */
+.ink-btngroup > .ink-btn:hover, .ink-btngroup > .ink-btn:focus-visible { position: relative; z-index: 1; }
+
+/* ═══ Chip ═════════════════════════════════════════════════════════════════ */
+
+.ink-chip {
+  display: inline-flex; align-items: center;
+  min-height: var(--ctl-h-sm);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: var(--text-base); font-weight: var(--weight-medium);
+  color: var(--color-text);
+  transition: border-color var(--dur-base) ease, background var(--dur-base) ease;
+}
+.ink-chip__press {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  min-height: var(--ctl-h-sm); padding: 0 var(--ctl-px-pill-sm);
+  border: none; background: none; font: inherit; color: inherit;
+  border-radius: inherit;
+}
+button.ink-chip__press { cursor: pointer; }
+.ink-chip--removable .ink-chip__press { padding-right: var(--space-1); }
+/* Tone variables carry a fallback throughout, so markup written by hand
+   against these classes — the documented path for a non-React binding — still
+   gets colours. An unresolved var() is not an error; it is silently nothing. */
+.ink-chip__icon { display: inline-flex; color: var(--ink-tone-fg, var(--color-text-secondary)); }
+.ink-chip[data-selected] { background: var(--ink-tone-soft, var(--color-neutral-soft)); border-color: var(--ink-tone-fg, var(--color-text-secondary)); color: var(--ink-tone-fg, var(--color-text-secondary)); }
+.ink-chip[data-disabled] { opacity: 0.5; }
+.ink-chip__press:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* A separate control, so a chip you meant to select never vanishes instead. */
+.ink-chip__remove {
+  width: var(--space-5); height: var(--space-5); margin-right: var(--space-1);
+  display: grid; place-items: center; padding: 0;
+  border: none; border-radius: var(--radius-pill);
+  background: none; color: var(--color-text-tertiary);
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+.ink-chip__remove:hover { background: var(--color-border); color: var(--color-text); }
+.ink-chip__remove:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+/* ═══ Text, link, surface, container ═══════════════════════════════════════ */
+
+.ink-text { margin: 0; font-family: var(--font-body); color: var(--color-text); line-height: var(--leading-base); }
+.ink-text[data-size="xs"] { font-size: var(--text-xs); }
+.ink-text[data-size="sm"] { font-size: var(--text-sm); }
+.ink-text[data-size="base"] { font-size: var(--text-base); }
+.ink-text[data-size="md"] { font-size: var(--text-md); }
+.ink-text[data-size="lg"] { font-size: var(--text-lg); line-height: var(--leading-snug); }
+.ink-text[data-size="xl"] { font-size: var(--text-xl); line-height: var(--leading-tight); }
+.ink-text[data-weight="regular"] { font-weight: var(--weight-regular); }
+.ink-text[data-weight="medium"] { font-weight: var(--weight-medium); }
+.ink-text[data-weight="semibold"] { font-weight: var(--weight-semibold); }
+.ink-text[data-weight="bold"] { font-weight: var(--weight-bold); }
+.ink-text[data-tone="secondary"] { color: var(--color-text-secondary); }
+.ink-text[data-tone="tertiary"] { color: var(--color-text-tertiary); }
+.ink-text[data-mono] { font-family: var(--font-mono); }
+.ink-text[data-numeric] { font-variant-numeric: tabular-nums; }
+
+.ink-link {
+  border: none; background: none; padding: 0;
+  font: inherit; color: var(--color-accent-line);
+  /* Underlined by default. A link identified only by colour is invisible to a
+     reader who cannot distinguish it, and inside a paragraph there is nothing
+     else marking it. */
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+.ink-link:hover { text-decoration-thickness: 2px; }
+.ink-link--standalone { text-decoration: none; color: inherit; }
+.ink-link--standalone:hover { text-decoration: underline; }
+.ink-link__external {
+  display: inline-block; width: 9px; height: 9px; margin-left: 4px;
+  border-top: 2px solid currentColor; border-right: 2px solid currentColor;
+  transform: rotate(45deg) translate(-1px, 1px);
+}
+
+.ink-surface { border-radius: var(--radius-lg); padding: var(--pad-md); }
+.ink-surface--flush { padding: 0; }
+.ink-surface[data-tone="surface"] { background: var(--color-surface); }
+.ink-surface[data-tone="content"] { background: var(--color-content); }
+.ink-surface[data-tone="chrome"] { background: var(--color-chrome); }
+
+.ink-container { width: 100%; margin: 0 auto; padding: 0 var(--pad-md); }
+.ink-container[data-width="prose"] { max-width: 68ch; }
+.ink-container[data-width="content"] { max-width: var(--content-max-width); }
+.ink-container[data-width="wide"] { max-width: 1200px; }
+.ink-container[data-width="full"] { max-width: none; }
+
+/* ═══ List item ════════════════════════════════════════════════════════════ */
+
+.ink-listitem {
+  display: flex; align-items: center; gap: var(--ctl-gap-md);
+  width: 100%; min-height: var(--ctl-h-lg);
+  padding: var(--ctl-py-md) var(--pad-md);
+  border: none; background: none;
+  font: inherit; color: var(--color-text); text-align: left;
+}
+.ink-listitem--pressable { cursor: pointer; }
+.ink-listitem--pressable:hover { background: var(--color-hover); }
+.ink-listitem--pressable:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.ink-listitem[data-selected] { background: var(--color-accent-soft); }
+.ink-listitem:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-listitem__lead, .ink-listitem__trail { display: flex; align-items: center; flex-shrink: 0; }
+.ink-listitem__trail { margin-left: auto; color: var(--color-text-secondary); }
+.ink-listitem__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ink-listitem__title { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.ink-listitem__desc { font-size: var(--text-sm); color: var(--color-text-secondary); }
+
+/* ═══ Accordion ════════════════════════════════════════════════════════════ */
+
+.ink-accordion { display: flex; flex-direction: column; }
+.ink-accordion__item { border-bottom: var(--ink-hairline-width) solid var(--color-border); }
+.ink-accordion__head {
+  display: flex; align-items: center; gap: var(--ctl-gap-md);
+  min-height: var(--ctl-h-lg); padding: var(--ctl-py-md) 0;
+  cursor: pointer; list-style: none;
+  font-size: var(--text-md); font-weight: var(--weight-semibold);
+}
+.ink-accordion__head::-webkit-details-marker { display: none; }
+.ink-accordion__head:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.ink-accordion__title { flex: 1 1 auto; min-width: 0; }
+.ink-accordion__meta { font-size: var(--text-sm); font-weight: var(--weight-regular); color: var(--color-text-secondary); }
+.ink-accordion__chev {
+  flex-shrink: 0; width: 8px; height: 8px;
+  border-right: 2px solid var(--color-text-secondary);
+  border-bottom: 2px solid var(--color-text-secondary);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform var(--dur-base) var(--ink-ease);
+}
+.ink-accordion__item[open] .ink-accordion__chev { transform: rotate(-135deg) translate(-2px, -2px); }
+.ink-accordion__body { padding-bottom: var(--pad-md); font-size: var(--text-base); color: var(--color-text-secondary); line-height: var(--leading-base); }
+
+/* ═══ Timeline ═════════════════════════════════════════════════════════════ */
+
+.ink-timeline { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.ink-timeline__entry { position: relative; display: flex; gap: var(--space-4); padding-bottom: var(--space-5); }
+/* The rule runs between markers, and stops at the last one rather than
+   trailing off into nothing. */
+.ink-timeline__entry:not(:last-child)::before {
+  content: ""; position: absolute;
+  left: 7px; top: var(--space-5); bottom: 0;
+  width: var(--ink-border-width);
+  background: var(--color-border);
+}
+.ink-timeline__marker {
+  flex-shrink: 0; width: 16px; height: 16px; margin-top: 3px;
+  border: var(--ink-border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  z-index: 1;
+}
+.ink-timeline__entry[data-state="done"] .ink-timeline__marker { border-color: var(--color-text); background: var(--color-text); }
+.ink-timeline__entry[data-state="current"] .ink-timeline__marker { border-color: var(--color-accent-line); background: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.ink-timeline__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ink-timeline__title { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+
+/* ═══ Pagination ═══════════════════════════════════════════════════════════ */
+
+.ink-pagination { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+.ink-pagination__page, .ink-pagination__step {
+  min-width: var(--ctl-h-md); height: var(--ctl-h-md);
+  display: grid; place-items: center; padding: 0 var(--space-1);
+  border: none; border-radius: var(--ctl-r-md);
+  background: none;
+  font-family: var(--font-body); font-size: var(--text-base); font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary); cursor: pointer;
+}
+.ink-pagination__page:hover:not([aria-current]), .ink-pagination__step:hover:not(:disabled) { background: var(--color-hover); color: var(--color-text); }
+.ink-pagination__page[aria-current] { background: var(--color-accent); color: var(--color-text-on-accent); }
+.ink-pagination__step:disabled { opacity: 0.3; cursor: not-allowed; }
+.ink-pagination__page:focus-visible, .ink-pagination__step:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.ink-pagination__gap { min-width: var(--space-6); text-align: center; color: var(--color-text-tertiary); }
+
+/* ═══ Stepper ══════════════════════════════════════════════════════════════ */
+
+.ink-stepper { margin: 0; padding: 0; list-style: none; display: flex; }
+.ink-stepper--horizontal { flex-direction: row; gap: var(--space-2); }
+.ink-stepper--vertical { flex-direction: column; }
+
+.ink-stepper__step { flex: 1 1 0; min-width: 0; position: relative; }
+.ink-stepper--horizontal .ink-stepper__step:not(:last-child)::after {
+  content: ""; position: absolute;
+  top: 15px; left: calc(50% + var(--space-5)); right: calc(-50% + var(--space-5));
+  height: var(--ink-border-width); background: var(--color-border);
+}
+.ink-stepper--horizontal .ink-stepper__step[data-state="done"]::after { background: var(--color-text); }
+
+.ink-stepper__body {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  width: 100%; padding: 0; border: none; background: none;
+  font: inherit; color: inherit; text-align: left;
+}
+.ink-stepper--horizontal .ink-stepper__body { flex-direction: column; align-items: center; text-align: center; gap: var(--space-2); }
+button.ink-stepper__body { cursor: pointer; }
+button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: var(--radius-sm); }
+
+.ink-stepper__marker {
+  flex-shrink: 0;
+  width: var(--space-8); height: var(--space-8);
+  display: grid; place-items: center;
+  border: var(--ink-border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-family: var(--font-mono); font-size: var(--text-sm); font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+}
+.ink-stepper__step[data-state="done"] .ink-stepper__marker { border-color: var(--color-text); background: var(--color-text); color: var(--color-surface); }
+.ink-stepper__step[data-state="current"] .ink-stepper__marker { border-color: var(--color-text); background: var(--color-accent); color: var(--color-text-on-accent); box-shadow: var(--ink-press-compact) var(--ink-press-compact) 0 var(--border-ink); }
+.ink-stepper__tick { width: 10px; height: 6px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg) translate(1px, -1px); }
+.ink-stepper__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ink-stepper__label { font-size: var(--text-base); font-weight: var(--weight-semibold); }
+.ink-stepper__step[data-state="todo"] .ink-stepper__label { color: var(--color-text-secondary); }
+.ink-stepper__desc { font-size: var(--text-sm); color: var(--color-text-secondary); }
+
+/* ═══ Fab & speed dial ═════════════════════════════════════════════════════ */
+
+.ink-fab {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--space-2);
+  width: 56px; height: 56px; padding: 0;
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent); color: var(--color-text-on-accent);
+  /* The edge, because a fab is the thing the screen is FOR — content, not
+     chrome. It is the one floating control that earns the plate. */
+  box-shadow: var(--ink-rest) var(--ink-rest) 0 var(--border-ink);
+  font-family: var(--font-body); font-size: var(--text-md); font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ink-ease), box-shadow var(--dur-fast) var(--ink-ease);
+}
+.ink-fab:active:not(:disabled) {
+  transform: translate(calc(var(--ink-rest) - var(--ink-press-compact)), calc(var(--ink-rest) - var(--ink-press-compact)));
+  box-shadow: var(--ink-press-compact) var(--ink-press-compact) 0 var(--border-ink);
+}
+.ink-fab:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-fab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
+.ink-fab--extended { width: auto; padding: 0 var(--ctl-px-lg); }
+.ink-fab[data-position="bottom-end"], .ink-fab[data-position="bottom-start"] {
+  position: fixed; z-index: 45;
+  bottom: max(var(--space-6), env(safe-area-inset-bottom, 0px));
+}
+.ink-fab[data-position="bottom-end"] { right: var(--space-6); }
+.ink-fab[data-position="bottom-start"] { left: var(--space-6); }
+
+.ink-fab__plus { position: relative; width: 16px; height: 2px; border-radius: 1px; background: currentColor; }
+.ink-fab__plus::after { content: ""; position: absolute; inset: 0; background: currentColor; border-radius: 1px; transform: rotate(90deg); }
+
+.ink-speeddial { display: inline-flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); }
+.ink-speeddial[data-position="bottom-end"] { position: fixed; right: var(--space-6); bottom: max(var(--space-6), env(safe-area-inset-bottom, 0px)); z-index: 45; }
+.ink-speeddial[data-position="bottom-start"] { position: fixed; left: var(--space-6); bottom: max(var(--space-6), env(safe-area-inset-bottom, 0px)); z-index: 45; align-items: flex-start; }
+.ink-speeddial__actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+.ink-speeddial__action {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  padding: 0; border: none; background: none; cursor: pointer;
+  font: inherit; color: var(--color-text);
+}
+.ink-speeddial__actionLabel {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  font-size: var(--text-sm); font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+.ink-speeddial__actionIcon {
+  width: var(--ctl-h-md); height: var(--ctl-h-md);
+  display: grid; place-items: center;
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+.ink-speeddial .ink-fab { transition: transform var(--dur-base) var(--ink-ease); }
+.ink-speeddial[data-open] .ink-fab { transform: rotate(45deg); }
+
+/* ═══ Drawer ═══════════════════════════════════════════════════════════════ */
+
+.ink-drawer { position: fixed; inset: 0; z-index: 70; display: flex; pointer-events: none; visibility: hidden; transition: visibility 0s var(--dur-base); }
+.ink-drawer[data-open] { pointer-events: auto; visibility: visible; transition: visibility 0s; }
+.ink-drawer--end { justify-content: flex-end; }
+.ink-drawer--bottom { align-items: flex-end; }
+
+.ink-drawer__scrim {
+  position: absolute; inset: 0;
+  border: none; padding: 0;
+  background: rgba(23, 22, 22, 0.42);
+  opacity: 0; cursor: pointer;
+  transition: opacity var(--dur-base) ease;
+}
+.ink-drawer[data-open] .ink-drawer__scrim { opacity: 1; }
+
+.ink-drawer__panel {
+  position: relative;
+  display: flex; flex-direction: column; gap: var(--space-4);
+  padding: var(--pad-lg);
+  padding-top: max(var(--pad-lg), env(safe-area-inset-top, 0px));
+  background: var(--color-surface);
+  border: var(--ink-border-width) solid var(--color-text);
+  overflow-y: auto;
+  transition: transform var(--dur-slow) var(--ink-ease);
+}
+.ink-drawer--start .ink-drawer__panel { width: min(360px, 86vw); height: 100%; border-left: none; border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0; transform: translateX(-100%); }
+.ink-drawer--end .ink-drawer__panel { width: min(360px, 86vw); height: 100%; border-right: none; border-radius: var(--radius-2xl) 0 0 var(--radius-2xl); transform: translateX(100%); }
+.ink-drawer--bottom .ink-drawer__panel { width: 100%; max-height: 86vh; border-bottom: none; border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; transform: translateY(100%); }
+.ink-drawer--full .ink-drawer__panel { width: 100%; max-width: none; border-radius: 0; border: none; }
+.ink-drawer[data-open] .ink-drawer__panel { transform: none; }
+
+/* ═══ Backdrop, avatar group, tooltip ══════════════════════════════════════ */
+
+.ink-backdrop {
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; place-items: center;
+  background: rgba(23, 22, 22, 0.55);
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--dur-base) ease, visibility 0s var(--dur-base);
+}
+.ink-backdrop[data-open] { opacity: 1; visibility: visible; transition: opacity var(--dur-base) ease, visibility 0s; }
+.ink-backdrop__body { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); color: #fff; }
+.ink-backdrop__label { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.ink-backdrop .ink-spinner { border-color: rgba(255,255,255,0.3); border-top-color: #fff; }
+
+.ink-avatargroup { display: inline-flex; align-items: center; }
+/* Overlapped, with a ring so the faces separate against each other. */
+.ink-avatargroup > * { margin-left: calc(var(--ink-avatar-size, 32px) * -0.3); box-shadow: 0 0 0 2px var(--color-bg); }
+.ink-avatargroup > *:first-child { margin-left: 0; }
+.ink-avatargroup__rest {
+  display: inline-grid; place-items: center;
+  border-radius: 50%;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono); font-weight: var(--weight-bold);
+}
+
+.ink-tooltip { position: relative; display: inline-flex; }
+.ink-tooltip__anchor { display: inline-flex; }
+.ink-tooltip__bubble {
+  position: absolute; left: 50%; z-index: 60;
+  transform: translateX(-50%);
+  max-width: 240px; width: max-content;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--ctl-r-sm);
+  background: var(--color-text); color: var(--color-bg);
+  font-size: var(--text-sm); line-height: 1.4;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity var(--dur-fast) ease, visibility 0s var(--dur-fast);
+}
+.ink-tooltip[data-placement="top"] .ink-tooltip__bubble { bottom: calc(100% + var(--space-2)); }
+.ink-tooltip[data-placement="bottom"] .ink-tooltip__bubble { top: calc(100% + var(--space-2)); }
+.ink-tooltip[data-open] .ink-tooltip__bubble { opacity: 1; visibility: visible; transition: opacity var(--dur-fast) ease, visibility 0s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-drawer__panel, .ink-drawer__scrim, .ink-backdrop,
+  .ink-accordion__chev, .ink-speeddial .ink-fab, .ink-fab { transition-duration: 1ms; }
 }

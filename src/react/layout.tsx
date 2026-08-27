@@ -1,7 +1,7 @@
 /**
  * Layout, tabs, and the two ways of showing rows of data.
  */
-import { useCallback, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useId, useMemo, useRef, type ReactNode } from "react";
 import { ariaSort, nextSort, sortRows, type SortState } from "../headless/table.js";
 import type { SpaceStep } from "../tokens/space.js";
 
@@ -350,5 +350,188 @@ export function InkList({
     <div role="list" aria-label={label} className={cx("ink-list", className)}>
       {children}
     </div>
+  );
+}
+
+/* ── List item ─────────────────────────────────────────────────────────────
+ *
+ * A row in an `InkList`. Distinct from `InkRow`, and the difference is what the
+ * row *is*: `InkRow` is a setting — a label and one control. A list item is a
+ * record — it has a leading slot, two lines of its own text, and a trailing
+ * slot, and the whole thing may be pressable.
+ */
+
+export function InkListItem({
+  lead,
+  title,
+  description,
+  trail,
+  onPress,
+  selected,
+  disabled,
+  className,
+}: {
+  lead?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  trail?: ReactNode;
+  onPress?: () => void;
+  selected?: boolean;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const body = (
+    <>
+      {lead ? <span className="ink-listitem__lead">{lead}</span> : null}
+      <span className="ink-listitem__text">
+        <span className="ink-listitem__title">{title}</span>
+        {description ? <span className="ink-listitem__desc">{description}</span> : null}
+      </span>
+      {trail ? <span className="ink-listitem__trail">{trail}</span> : null}
+    </>
+  );
+
+  const classes = cx("ink-listitem", onPress && "ink-listitem--pressable", className);
+
+  if (!onPress) {
+    return (
+      <div role="listitem" className={classes} data-selected={selected || undefined}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      role="listitem"
+      className={classes}
+      data-selected={selected || undefined}
+      aria-current={selected ? "true" : undefined}
+      disabled={disabled}
+      onClick={onPress}
+    >
+      {body}
+    </button>
+  );
+}
+
+/* ── Container ─────────────────────────────────────────────────────────────
+ *
+ * A reading column: a maximum width and the gutters either side. `prose` is
+ * capped for continuous text; `wide` is for a dashboard that wants the room.
+ */
+
+export function InkContainer({
+  width = "content",
+  className,
+  children,
+}: {
+  width?: "prose" | "content" | "wide" | "full";
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cx("ink-container", className)} data-width={width}>
+      {children}
+    </div>
+  );
+}
+
+/* ── Accordion ─────────────────────────────────────────────────────────────
+ *
+ * Disclosure, built on `<details>`. Not a div with a height animation: the
+ * platform element gives keyboard operation, the open state in the DOM,
+ * find-in-page reaching inside a closed panel, and printing that includes the
+ * content — four things a hand-rolled one loses, and find-in-page is the one
+ * people notice.
+ *
+ * `single` closes the others when one opens, for a group where reading two at
+ * once is not the point.
+ */
+
+export interface InkAccordionItem {
+  key: string;
+  title: ReactNode;
+  meta?: ReactNode;
+  disabled?: boolean;
+  content: ReactNode;
+}
+
+export function InkAccordion({
+  label,
+  items,
+  single,
+  defaultOpen = [],
+  className,
+}: {
+  label: string;
+  items: InkAccordionItem[];
+  single?: boolean;
+  defaultOpen?: string[];
+  className?: string;
+}) {
+  const name = useId();
+  return (
+    <div className={cx("ink-accordion", className)} role="group" aria-label={label}>
+      {items.map((item) => (
+        <details
+          key={item.key}
+          className="ink-accordion__item"
+          // A shared `name` is how the platform does "one at a time" — no state,
+          // and it keeps working if JavaScript has not loaded yet.
+          name={single ? name : undefined}
+          open={defaultOpen.includes(item.key) || undefined}
+        >
+          <summary className="ink-accordion__head">
+            <span className="ink-accordion__title">{item.title}</span>
+            {item.meta ? <span className="ink-accordion__meta">{item.meta}</span> : null}
+            <span className="ink-accordion__chev" aria-hidden="true" />
+          </summary>
+          <div className="ink-accordion__body">{item.content}</div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+/* ── Timeline ──────────────────────────────────────────────────────────────
+ *
+ * An ordered list with a rule down it. `<ol>` rather than a stack of divs
+ * because a timeline is a sequence, and that is the one thing a screen reader
+ * should be told about it.
+ */
+
+export interface InkTimelineEntry {
+  key: string;
+  time?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  /** `current` fills the marker; `done` outlines it; `todo` leaves it hollow. */
+  state?: "done" | "current" | "todo";
+}
+
+export function InkTimeline({
+  label,
+  entries,
+  className,
+}: {
+  label: string;
+  entries: InkTimelineEntry[];
+  className?: string;
+}) {
+  return (
+    <ol className={cx("ink-timeline", className)} aria-label={label}>
+      {entries.map((entry) => (
+        <li key={entry.key} className="ink-timeline__entry" data-state={entry.state ?? "done"}>
+          <span className="ink-timeline__marker" aria-hidden="true" />
+          <div className="ink-timeline__body">
+            {entry.time ? <span className="ink-eyebrow">{entry.time}</span> : null}
+            <span className="ink-timeline__title">{entry.title}</span>
+            {entry.description ? <span className="ink-prose">{entry.description}</span> : null}
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }

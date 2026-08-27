@@ -151,3 +151,200 @@ export function InkMeter({ value, label, className }: InkMeterProps) {
 export function InkStage({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={cx("ink-stage", className)}>{children}</div>;
 }
+
+/* ── Chip ──────────────────────────────────────────────────────────────────
+ *
+ * Distinct from `InkBadge`, and the difference is interaction rather than size.
+ * A badge is a *fact about something else* — a count, a grade, a size — and it
+ * is never pressable. A chip is a **thing in its own right**: a filter that is
+ * on, a tag on a record, a recipient in a field. It can be pressed, and it can
+ * be removed.
+ *
+ * The remove control is a separate button rather than the chip itself being
+ * pressable-to-delete, because a chip that vanishes when you meant to select it
+ * is the worst outcome available.
+ */
+
+export interface InkChipProps {
+  tone?: InkTone;
+  icon?: ReactNode;
+  /** Makes the chip itself pressable. */
+  onPress?: () => void;
+  /** Adds a remove control. Its label names what is being removed. */
+  onRemove?: () => void;
+  /** For a filter chip that is currently applied. */
+  selected?: boolean;
+  disabled?: boolean;
+  className?: string;
+  children: ReactNode;
+}
+
+export function InkChip({
+  tone = "neutral",
+  icon,
+  onPress,
+  onRemove,
+  selected,
+  disabled,
+  className,
+  children,
+}: InkChipProps) {
+  const { color } = useInkTheme();
+  const label = typeof children === "string" ? children : undefined;
+
+  const body = (
+    <>
+      {icon ? <span className="ink-chip__icon">{icon}</span> : null}
+      <span className="ink-chip__label">{children}</span>
+    </>
+  );
+
+  return (
+    <span
+      className={cx("ink-chip", onRemove && "ink-chip--removable", className)}
+      style={toneVars(tone, color)}
+      data-selected={selected || undefined}
+      data-disabled={disabled || undefined}
+    >
+      {onPress ? (
+        <button
+          type="button"
+          className="ink-chip__press"
+          aria-pressed={selected}
+          disabled={disabled}
+          onClick={onPress}
+        >
+          {body}
+        </button>
+      ) : (
+        <span className="ink-chip__press">{body}</span>
+      )}
+
+      {onRemove ? (
+        <button
+          type="button"
+          className="ink-chip__remove"
+          aria-label={label ? `Remove ${label}` : "Remove"}
+          disabled={disabled}
+          onClick={onRemove}
+        >
+          &times;
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+/* ── Text ──────────────────────────────────────────────────────────────────
+ *
+ * The type scale as a component, for the body copy that is not a title, an
+ * eyebrow or prose. `as` decides the element and `size` decides the look, and
+ * they are separate on purpose: a heading that needs to be small is still a
+ * heading, and a `<p>` that needs to look like one is still a paragraph.
+ */
+
+export function InkText({
+  as: Tag = "p",
+  size = "md",
+  weight,
+  tone,
+  mono,
+  numeric,
+  className,
+  children,
+}: {
+  as?: "p" | "span" | "div" | "h1" | "h2" | "h3" | "h4" | "strong" | "small";
+  size?: "xs" | "sm" | "base" | "md" | "lg" | "xl";
+  weight?: "regular" | "medium" | "semibold" | "bold";
+  tone?: "default" | "secondary" | "tertiary";
+  mono?: boolean;
+  /** Tabular figures, for anything a reader compares down a column. */
+  numeric?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tag
+      className={cx("ink-text", className)}
+      data-size={size}
+      data-weight={weight}
+      data-tone={tone}
+      data-mono={mono || undefined}
+      data-numeric={numeric || undefined}
+    >
+      {children}
+    </Tag>
+  );
+}
+
+/* ── Link ──────────────────────────────────────────────────────────────────
+ *
+ * Underlined by default, and that is not a style preference. A link identified
+ * only by colour is invisible to a reader who cannot distinguish it, and inside
+ * a paragraph there is nothing else to mark it. `standalone` drops the underline
+ * for a link that is already obviously one — a nav item, a card that is a link.
+ */
+
+export function InkLink({
+  href,
+  onPress,
+  standalone,
+  external,
+  className,
+  children,
+}: {
+  href?: string;
+  onPress?: () => void;
+  standalone?: boolean;
+  /** Adds the mark and the `rel` that stops the new tab reaching back. */
+  external?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const props = {
+    className: cx("ink-link", standalone && "ink-link--standalone", className),
+    ...(external ? { target: "_blank", rel: "noreferrer noopener" } : {}),
+  };
+
+  const body = (
+    <>
+      {children}
+      {external ? <span className="ink-link__external" aria-label="(opens in a new tab)" /> : null}
+    </>
+  );
+
+  if (href) return <a href={href} {...props}>{body}</a>;
+  return (
+    <button type="button" onClick={onPress} {...props}>
+      {body}
+    </button>
+  );
+}
+
+/* ── Surface ───────────────────────────────────────────────────────────────
+ *
+ * A plain panel: the fill and the radius, with no edge and no plate. What
+ * `InkCard` is when the content is not what the screen is for — a well, a
+ * section background, somewhere to sit a form.
+ */
+
+export function InkSurface({
+  tone = "surface",
+  padded = true,
+  className,
+  children,
+}: {
+  tone?: "surface" | "content" | "chrome";
+  padded?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cx("ink-surface", !padded && "ink-surface--flush", className)}
+      data-tone={tone}
+    >
+      {children}
+    </div>
+  );
+}

@@ -105,3 +105,66 @@ export function badgeText(badge: NavDestination["badge"]): string | null {
   if (badge === true) return "";
   return badge > 99 ? "99+" : String(badge);
 }
+
+/* ── The sidebar ladder ────────────────────────────────────────────────────
+ *
+ * Four rungs rather than an open/closed boolean, because a sidebar has more
+ * than two useful states and products keep rebuilding the middle two by hand:
+ *
+ *     full     labels, section headings, the lot
+ *     rail     icons only — still navigation, just quiet
+ *     button   one control; the navigation is available but not present
+ *     hidden   gone, for content that wants the whole screen
+ *
+ * `rail` and `button` are different answers to the same pressure and are often
+ * confused. A rail keeps every destination one press away and costs 68px; a
+ * button costs nothing and makes every destination two presses. Which is right
+ * depends on how often the reader switches, not on how narrow the window is.
+ */
+
+export type SidebarSize = "full" | "rail" | "button" | "hidden";
+
+const LADDER: SidebarSize[] = ["full", "rail", "button", "hidden"];
+
+/** One rung narrower, or wider. Stops at the ends rather than wrapping. */
+export function stepSidebar(current: SidebarSize, direction: "narrower" | "wider"): SidebarSize {
+  const at = LADDER.indexOf(current);
+  const next = direction === "narrower" ? at + 1 : at - 1;
+  return LADDER[Math.min(LADDER.length - 1, Math.max(0, next))] ?? current;
+}
+
+/**
+ * What a toggle should do next, and what to call it.
+ *
+ * A single control that cycles through four states is a control nobody can
+ * predict, so the toggle only ever moves between the two rungs a product has
+ * chosen — `collapsed` and its expanded partner.
+ */
+export function sidebarToggle(current: SidebarSize, collapsed: SidebarSize = "rail") {
+  const expanded: SidebarSize = "full";
+  const next = current === expanded ? collapsed : expanded;
+  return { next, label: next === expanded ? "Expand navigation" : "Collapse navigation" };
+}
+
+/** How wide a rung is, in px. `button` and `hidden` take no layout width. */
+export function sidebarWidth(size: SidebarSize): number {
+  if (size === "full") return NAV_WIDTH_FULL;
+  if (size === "rail") return NAV_WIDTH_RAIL;
+  return 0;
+}
+
+export const NAV_WIDTH_FULL = 248;
+export const NAV_WIDTH_RAIL = 68;
+
+/**
+ * The size a container width suggests.
+ *
+ * Below the bar breakpoint a sidebar should not be inline at all — it becomes
+ * an overlay, which is a *presentation* rather than a size, so this returns
+ * `hidden` and leaves the drawer to the caller.
+ */
+export function sidebarSizeFor(width: number): SidebarSize {
+  if (width < 640) return "hidden";
+  if (width < 1024) return "rail";
+  return "full";
+}
