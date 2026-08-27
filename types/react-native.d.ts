@@ -88,6 +88,11 @@ declare module "react-native" {
     borderLeftWidth?: number;
     borderRightWidth?: number;
     borderRadius?: number;
+    shadowColor?: ColorValue;
+    shadowOffset?: { width: number; height: number };
+    shadowOpacity?: number;
+    shadowRadius?: number;
+    elevation?: number;
     borderTopLeftRadius?: number;
     borderTopRightRadius?: number;
     borderBottomLeftRadius?: number;

@@ -231,7 +231,7 @@ code {
       <span class="ink-badge" style="--ink-tone-fg: var(--border-ink); --ink-tone-soft: var(--bg-brand-soft)">${componentCount} components</span>
       <span class="ink-badge" style="--ink-tone-fg: var(--color-text-secondary); --ink-tone-soft: var(--color-neutral-soft)">React</span>
       <span class="ink-badge" style="--ink-tone-fg: var(--color-text-secondary); --ink-tone-soft: var(--color-neutral-soft)">React Native</span>
-      <span class="ink-badge" style="--ink-tone-fg: var(--color-text-secondary); --ink-tone-soft: var(--color-neutral-soft)">238 tests</span>
+      <span class="ink-badge" style="--ink-tone-fg: var(--color-text-secondary); --ink-tone-soft: var(--color-neutral-soft)">zero dependencies</span>
     </div>
   </header>
 
@@ -243,7 +243,7 @@ code {
     <div class="spec">
       <div class="demo">
         <div class="frame">
-          <nav class="ink-glass ink-glass--vertical ink-sidebar" aria-label="Main" id="side">
+          <nav class="ink-glass ink-glass--vertical ink-glass--raised ink-sidebar ink-sidebar--floating" aria-label="Main" id="side">
             <div class="ink-sidebar__head"><strong>Ink</strong></div>
             <div class="ink-sidebar__body">
               <div class="ink-sidebar__section">
@@ -258,7 +258,7 @@ code {
           </nav>
 
           <div class="frame__body">
-            <header class="ink-glass ink-navbar ink-navbar--floating" id="nav" data-stage="condensed" data-material="true" style="position:static;margin:0">
+            <header class="ink-glass ink-glass--raised ink-navbar ink-navbar--floating" id="nav" data-stage="condensed" data-material="true" style="position:static;margin:0">
               <div class="ink-navbar__body" id="navBody">
                 <h1 class="ink-navbar__title">Library</h1>
                 <div class="ink-navbar__spacer"></div>
@@ -268,7 +268,7 @@ code {
               <button class="ink-navbar__puck" id="navPuck" tabindex="-1" aria-label="Show navigation"><span class="ink-navbar__puckMark"></span></button>
             </header>
 
-            <nav class="ink-glass ink-bottombar ink-bottombar--floating" aria-label="Sections" id="bot" data-stage="condensed" data-material="true" style="position:static;margin:0">
+            <nav class="ink-glass ink-glass--raised ink-bottombar ink-bottombar--floating" aria-label="Sections" id="bot" data-stage="condensed" data-material="true" style="position:static;margin:0">
               <div class="ink-bottombar__body" id="botBody">
                 <button class="ink-nav__item" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Home</span><span class="ink-nav__mark"></span></button>
                 <button class="ink-nav__item"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Inbox</span><span class="ink-nav__badge">12</span><span class="ink-nav__mark"></span></button>
@@ -621,7 +621,7 @@ code {
         </div>
 
         <div class="frame" style="min-height:280px" id="ladderFrame">
-          <nav class="ink-glass ink-glass--vertical ink-sidebar ink-sidebar--floating" aria-label="Ladder" id="ladder" data-size="full">
+          <nav class="ink-glass ink-glass--vertical ink-glass--raised ink-sidebar ink-sidebar--floating" aria-label="Ladder" id="ladder" data-size="full">
             <div class="ink-sidebar__head"><strong>Ink</strong></div>
             <div class="ink-sidebar__body">
               <div class="ink-sidebar__section">
@@ -631,7 +631,7 @@ code {
               </div>
             </div>
           </nav>
-          <button class="ink-glass ink-sidebar__puck" id="ladderPuck" hidden aria-label="Show navigation" style="position:absolute;margin:var(--space-4)"><span class="ink-navbar__puckMark"></span></button>
+          <button class="ink-glass ink-glass--raised ink-sidebar__puck" id="ladderPuck" hidden aria-label="Show navigation" style="position:absolute;margin:var(--space-4)"><span class="ink-navbar__puckMark"></span></button>
           <div class="frame__body"><span class="ink-eyebrow" id="rungOut" style="color:#fff">full &mdash; 248px</span></div>
         </div>
       </div>
@@ -954,7 +954,7 @@ document.querySelectorAll('[role="switch"]').forEach(function (s) {
   drawer.className = "ink-drawer ink-drawer--start";
   drawer.innerHTML =
     '<button class="ink-drawer__scrim" type="button" aria-label="Close navigation"></button>' +
-    '<aside class="ink-glass ink-drawer__panel" aria-label="Navigation">' +
+    '<aside class="ink-glass ink-glass--raised ink-drawer__panel" aria-label="Navigation">' +
     '<span class="ink-eyebrow">Navigation</span>' +
     '<button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>' +
     '<button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>' +

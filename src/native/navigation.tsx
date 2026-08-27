@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { stageHasMaterial, type NavbarStage } from "../headless/navbar.js";
 import { BAR_MAX, badgeText, fitBar, shapeFor, type NavDestination, type NavShape } from "../headless/nav.js";
-import { glassSurface } from "../tokens/glass.js";
+import { glassLift, glassSurface } from "../tokens/glass.js";
 import { useInkTheme } from "./InkProvider.js";
 import { inkText } from "./type.js";
 
@@ -121,7 +121,7 @@ export function InkBottomBar({
   moreIcon,
   onMore,
   bottomInset = 0,
-  variant = "docked",
+  variant = "floating",
   material = "auto",
   collapse = false,
   stage: forced,
@@ -232,7 +232,8 @@ export function InkBottomBar({
           paddingBottom: floating ? theme.space[1] : Math.max(theme.space[1], bottomInset),
           borderTopWidth: floating || !hasMaterial ? 0 : theme.edge.hairlineWidth,
           borderColor: theme.color.line,
-          borderRadius: collapsed ? theme.radius.pill : floating ? theme.radius["2xl"] : 0,
+          borderRadius: collapsed ? theme.radius.pill : floating ? theme.radius.xl : 0,
+          ...(floating && hasMaterial ? glassLift(theme) : null),
           marginHorizontal: floating ? theme.space[4] : 0,
           marginBottom: floating ? Math.max(theme.space[3], bottomInset) : 0,
           backgroundColor: hasMaterial ? glass.background : "transparent",
@@ -301,6 +302,8 @@ export interface InkSidebarProps {
   value: string;
   onChange: (key: string) => void;
   variant?: "sidebar" | "rail";
+  /** Rounded and lifted off the content, as the bars are. */
+  floating?: boolean;
   header?: ReactNode;
   footer?: ReactNode;
   onToggle?: () => void;
@@ -314,6 +317,7 @@ export function InkSidebar({
   value,
   onChange,
   variant = "sidebar",
+  floating = true,
   header,
   footer,
   topInset = 0,
@@ -337,9 +341,13 @@ export function InkSidebar({
           // the navbar wear. The rule stays, because a boundary that depends on
           // a blur landing is a boundary that sometimes is not there.
           backgroundColor: glassSurface(theme).background,
-          borderRightWidth: theme.edge.hairlineWidth,
+          borderRightWidth: floating ? 0 : theme.edge.hairlineWidth,
+          borderWidth: floating ? theme.edge.hairlineWidth : 0,
           borderColor: theme.color.line,
+          borderRadius: floating ? theme.radius.xl : 0,
+          margin: floating ? theme.space[3] : 0,
           alignItems: rail ? "center" : "stretch",
+          ...(floating ? glassLift(theme) : null),
         },
         style,
       ]}

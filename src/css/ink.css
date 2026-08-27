@@ -546,6 +546,22 @@
 /* Reduced transparency turns it back into paper. Nothing is lost but the
  * effect: the tint was already carrying the legibility, so the solid version
  * measures better, not worse. */
+/* ── Raised glass ──────────────────────────────────────────────────────────
+ *
+ * The floating form: rounded, lifted off the content, still translucent. This
+ * is the treatment the navbar had first, and it is defined once here rather
+ * than three times so a navbar, a bottom bar and a sidebar cannot drift into
+ * three slightly different pills.
+ *
+ * The lift is a token because it is scheme-dependent — a 10%-charcoal shadow is
+ * invisible on a near-black page, so a dark theme reusing the light one gets a
+ * bar that looks printed on the background rather than floating over it.
+ */
+.ink-glass--raised {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--ink-glass-lift);
+}
+
 /* A vertical surface — a sidebar, a rail — catches the light down its inner
    edge rather than along its top. Same two hairlines, turned ninety degrees. */
 .ink-glass--vertical::after {
@@ -629,9 +645,7 @@
 
 .ink-navbar--floating {
   border-bottom: none;
-  border-radius: var(--radius-xl);
   margin-top: var(--space-3);
-  box-shadow: 0 6px 24px rgba(23, 22, 22, 0.10), 0 1px 2px rgba(23, 22, 22, 0.06);
 }
 
 /* No material until something has passed underneath. An always-on bar spends
@@ -1422,10 +1436,8 @@
 /* Lifted off the edge as a pill. The shape the material is actually for. */
 .ink-bottombar--floating {
   border-top: none;
-  border-radius: var(--radius-2xl);
   margin: 0 var(--space-4) max(var(--space-3), env(safe-area-inset-bottom, 0px));
   padding-bottom: var(--space-1);
-  box-shadow: 0 6px 24px rgba(23, 22, 22, 0.10), 0 1px 2px rgba(23, 22, 22, 0.06);
 }
 
 /* No material until something has passed underneath. */
@@ -2051,8 +2063,6 @@
   height: auto;
   margin: var(--space-3);
   border: var(--ink-hairline-width) solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 6px 24px rgba(23, 22, 22, 0.08);
 }
 .ink-sidebar--floating .ink-sidebar__body { padding-right: 2px; }
 

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { InkBottomBar, InkSidebar } from "./navigation.js";
+import { InkNavbar } from "./InkNavbar.js";
 import { InkCalendar, InkDatePicker, InkTimePicker } from "./pickers.js";
 import { InkBubbleGroup, InkTyping } from "./chat.js";
 import { InkForm, InkFormField, InkMenu, InkRadioGroup, InkRangeSlider } from "./forms.js";
@@ -402,5 +403,41 @@ describe("the bar and the sidebar wear the same material as the navbar", () => {
     expect(nav.className).toContain("ink-glass");
     // A vertical surface catches the light down its edge, not along its top.
     expect(nav.className).toContain("ink-glass--vertical");
+  });
+});
+
+describe("one glass treatment, three bars", () => {
+  /**
+   * The navbar had this look first. Defining it three times is how a navbar, a
+   * bottom bar and a sidebar drift into three slightly different pills.
+   */
+  it("gives all three the same raised-glass surface by default", () => {
+    const { container: nav } = render(<InkNavbar title="Library" />);
+    const { container: bar } = render(
+      <InkBottomBar label="Main" items={[{ key: "a", label: "Home" }]} value="a" onChange={() => {}} />,
+    );
+    const { container: side } = render(
+      <InkSidebar
+        label="Main"
+        sections={[{ items: [{ key: "a", label: "Everything" }] }]}
+        value="a"
+        onChange={() => {}}
+      />,
+    );
+
+    for (const [name, root, selector] of [
+      ["navbar", nav, "header"],
+      ["bottom bar", bar, "nav"],
+      ["sidebar", side, "nav"],
+    ] as const) {
+      const el = root.querySelector(selector)!;
+      expect(el.className, `${name} is not glass`).toContain("ink-glass");
+      expect(el.className, `${name} is not raised`).toContain("ink-glass--raised");
+    }
+  });
+
+  it("still allows a flush bar for a layout that wants one", () => {
+    const { container } = render(<InkNavbar title="Library" variant="sticky" />);
+    expect(container.querySelector("header")!.className).not.toContain("ink-glass--raised");
   });
 });

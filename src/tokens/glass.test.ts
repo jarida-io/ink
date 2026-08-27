@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { glassSurface, minimumTintAlpha } from "./glass.js";
+import { glassLift, glassSurface, minimumTintAlpha } from "./glass.js";
 import { createTheme } from "./theme.js";
 import { contrast, parseColor } from "./contrast.js";
 
@@ -86,5 +86,31 @@ describe("the tint is derived, not chosen", () => {
   it("keeps a solid fallback for reduced transparency", () => {
     const glass = glassSurface(createTheme());
     expect(glass.solid).toBe(createTheme().color.surface);
+  });
+});
+
+describe("the lift", () => {
+  /**
+   * A 10%-charcoal shadow is invisible on a #131119 page. A dark theme that
+   * reuses the light lift gets a bar that looks printed on the background
+   * rather than floating over it.
+   */
+  it("is stronger on a dark ground, not the same value reused", () => {
+    const light = glassSurface(createTheme()).lift;
+    const dark = glassSurface(createTheme({ scheme: "dark" })).lift;
+    expect(dark).not.toBe(light);
+    const opacity = (s: string) => Number(s.match(/rgba\([^)]*?([\d.]+)\)/)![1]);
+    expect(opacity(dark)).toBeGreaterThan(opacity(light));
+  });
+
+  it("gives native both an iOS shadow and an Android elevation", () => {
+    // Setting only one is the most common way a floating element ends up flat
+    // in half the screenshots.
+    for (const scheme of ["light", "dark"] as const) {
+      const lift = glassLift(createTheme({ scheme }));
+      expect(lift.shadowOpacity).toBeGreaterThan(0);
+      expect(lift.shadowRadius).toBeGreaterThan(0);
+      expect(lift.elevation).toBeGreaterThan(0);
+    }
   });
 });

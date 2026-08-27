@@ -62,6 +62,14 @@ export interface GlassSurface {
   rim: string;
   /** The rim shade, at the bottom, so the bar reads as a solid piece. */
   rimShade: string;
+  /**
+   * The shadow that lifts a floating surface off the content.
+   *
+   * Scheme-dependent, and it has to be: a 10%-charcoal shadow is invisible on a
+   * #131119 page, so a dark theme that reuses the light one gets a bar that
+   * appears to be printed on the background rather than floating over it.
+   */
+  lift: string;
   /** The measured ratio at the worst backdrop. Never below the floor. */
   worstCase: number;
   /** What the glass becomes when transparency is reduced. */
@@ -175,7 +183,31 @@ export function glassSurface(theme: InkTheme, options: GlassOptions = {}): Glass
     // rather than a rectangle of fog.
     rim: light ? "rgba(255, 255, 255, 0.65)" : "rgba(255, 255, 255, 0.14)",
     rimShade: light ? "rgba(23, 22, 22, 0.06)" : "rgba(0, 0, 0, 0.28)",
+    lift: light
+      ? "0 6px 24px rgba(23, 22, 22, 0.10), 0 1px 2px rgba(23, 22, 22, 0.06)"
+      : "0 8px 28px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.40)",
     worstCase: Math.round(worst * 100) / 100,
     solid: surface,
   };
+}
+
+/**
+ * The same lift, in the shape React Native takes.
+ *
+ * A CSS `box-shadow` string does not translate: iOS wants four separate
+ * properties and Android wants a single `elevation` number that it renders its
+ * own way. Returning both is not redundancy — a view needs both set or it has a
+ * shadow on one platform and none on the other, which is the most common way a
+ * "floating" element ends up flat in half the screenshots.
+ */
+export function glassLift(theme: InkTheme) {
+  const dark = theme.scheme === "dark";
+  return {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: dark ? 8 : 6 },
+    shadowOpacity: dark ? 0.55 : 0.14,
+    shadowRadius: dark ? 14 : 12,
+    // Android ignores every property above and uses only this one.
+    elevation: dark ? 12 : 8,
+  } as const;
 }

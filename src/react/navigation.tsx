@@ -90,7 +90,7 @@ export function InkBottomBar({
   moreLabel = "More",
   moreIcon,
   onMore,
-  variant = "docked",
+  variant = "floating",
   material = "auto",
   collapse = false,
   stage: forced,
@@ -129,7 +129,13 @@ export function InkBottomBar({
     <nav
       ref={ref}
       aria-label={label}
-      className={cx("ink-glass", "ink-bottombar", `ink-bottombar--${variant}`, className)}
+      className={cx(
+        "ink-glass",
+        variant === "floating" && "ink-glass--raised",
+        "ink-bottombar",
+        `ink-bottombar--${variant}`,
+        className,
+      )}
       data-icons-only={layout.iconsOnly || undefined}
       data-stage={stage}
       data-material={hasMaterial}
@@ -255,7 +261,7 @@ export function InkSidebar({
   presentation = "inline",
   open = true,
   onClose,
-  variant = "flush",
+  variant = "floating",
   header,
   footer,
   onToggle,
@@ -274,7 +280,7 @@ export function InkSidebar({
     return (
       <button
         type="button"
-        className={cx("ink-glass", "ink-sidebar__puck", className)}
+        className={cx("ink-glass", "ink-glass--raised", "ink-sidebar__puck", className)}
         aria-label="Show navigation"
         aria-expanded={false}
         onClick={() => onSizeChange?.("full")}
@@ -290,6 +296,7 @@ export function InkSidebar({
       className={cx(
         "ink-glass",
         "ink-glass--vertical",
+        variant === "floating" && "ink-glass--raised",
         "ink-sidebar",
         rail && "ink-sidebar--rail",
         variant === "floating" && "ink-sidebar--floating",

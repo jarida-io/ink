@@ -185,6 +185,7 @@ export function cssVariables(theme: InkTheme): Record<string, string> {
     "--ink-glass-saturate": String(glass.saturate),
     "--ink-glass-rim": glass.rim,
     "--ink-glass-rim-shade": glass.rimShade,
+    "--ink-glass-lift": glass.lift,
   };
 
   // The neutral ramp. Read by the stylesheet, and useful to a consumer that

@@ -97,7 +97,7 @@ export function InkNavbar({
   lead,
   trail,
   actions,
-  variant = "sticky",
+  variant = "floating",
   material = "auto",
   collapse = false,
   collapsedBadge,
@@ -120,7 +120,13 @@ export function InkNavbar({
   const primary = actions?.find((a) => a.primary) ?? actions?.[0];
   const shown = collapsed ? [] : stage === "condensed" ? (primary ? [primary] : []) : actions;
 
-  const classes = ["ink-glass", "ink-navbar", `ink-navbar--${variant}`, className]
+  const classes = [
+    "ink-glass",
+    variant === "floating" && "ink-glass--raised",
+    "ink-navbar",
+    `ink-navbar--${variant}`,
+    className,
+  ]
     .filter(Boolean)
     .join(" ");
 

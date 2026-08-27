@@ -24,7 +24,7 @@ import {
 } from "react-native";
 import { stageHasMaterial, type NavbarStage } from "../headless/navbar.js";
 import { controlMetrics } from "../tokens/control.js";
-import { glassSurface } from "../tokens/glass.js";
+import { glassLift, glassSurface } from "../tokens/glass.js";
 import { useInkTheme } from "./InkProvider.js";
 import { inkText } from "./type.js";
 
@@ -65,7 +65,7 @@ export function InkNavbar({
   lead,
   trail,
   actions,
-  variant = "sticky",
+  variant = "floating",
   collapse = false,
   stage: forced,
   topInset = 0,
@@ -232,6 +232,7 @@ export function InkNavbar({
     borderColor: theme.color.line,
     marginHorizontal: variant === "floating" ? theme.space[4] : 0,
     marginTop: variant === "floating" ? theme.space[3] : 0,
+    ...(variant === "floating" && material ? glassLift(theme) : null),
     backgroundColor: !material
       ? "transparent"
       : reduceTransparency
