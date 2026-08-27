@@ -4,6 +4,7 @@
 import { useCallback, useId, useRef, type ReactNode } from "react";
 import { useEdgeBudget } from "../shared/budget.js";
 import { reachFor } from "../core/reach.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { TOUCH } from "../tokens/space.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
@@ -27,7 +28,7 @@ export interface InkButtonProps {
   disabled?: boolean;
   /** Full width. The hub uses this; the dense view rarely should. */
   block?: boolean;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   type?: "button" | "submit";
   className?: string;
   children: ReactNode;
@@ -51,7 +52,7 @@ export function InkButton({
       onClick={onPress}
       disabled={disabled}
     >
-      {icon}
+      {renderIconSlot(icon)}
       {children}
     </button>
   );

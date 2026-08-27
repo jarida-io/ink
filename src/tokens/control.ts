@@ -80,6 +80,52 @@ export function controlPadY(size: ControlSize): number {
 }
 
 /**
+ * Icon size, derived from the control the icon sits in.
+ *
+ *     iconSize = round(height * 0.45) snapped to the 4px grid
+ *     32 -> 16    44 -> 20    52 -> 24
+ *
+ * The same move as `PAD_RATIO`, for the same reason: a table of three numbers
+ * is a table someone adds a fourth row to by eye.
+ *
+ * The ratio is picked so `lg` lands exactly on 24, the grid every lucide icon
+ * is drawn on. At 24 the artwork is 1:1 and its 2px stroke is 2 device pixels —
+ * the one size where the drawing is untouched.
+ */
+export const ICON_RATIO = 0.45;
+
+export function controlIconSize(size: ControlSize): number {
+  return toGrid(CONTROL_HEIGHT[size] * ICON_RATIO);
+}
+
+/** The weight an icon's line should carry, in device pixels, at any size. */
+export const ICON_STROKE = 2;
+
+/**
+ * The stroke to ask for so a scaled icon keeps that weight.
+ *
+ * An icon drawn on a 24px grid with a 2px stroke and rendered at 16px is not a
+ * smaller icon, it is a *lighter* one: the stroke scales with everything else
+ * and lands at 1.33px. Beside a 20px icon at 1.67px and a 24px icon at 2px, one
+ * row of controls carries three different line weights, which reads the way
+ * three different font weights would.
+ *
+ * The fix is to ask for a stroke in the icon's own coordinate space that
+ * *renders* as the weight we want:
+ *
+ *     strokeInViewBox = desired * 24 / renderedSize
+ *
+ * which is what lucide's `absoluteStrokeWidth` computes, identically in both of
+ * its packages. Ink computes it rather than setting the flag, because the house
+ * set is data and data has no flag to set — and because a registered component
+ * and a house glyph must come out at the same weight or the mixture shows.
+ */
+export function iconStrokeWidth(renderedSize: number, desired: number = ICON_STROKE): number {
+  if (renderedSize <= 0) return desired;
+  return (desired * 24) / renderedSize;
+}
+
+/**
  * Radius follows height, so a 32px control does not wear a 14px corner.
  *
  * Roughly a quarter of the height, snapped to the radius scale rather than

@@ -13,6 +13,7 @@ import {
 } from "react";
 import { Animated, Easing, Image, Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { toneColors, type InkTone } from "../core/tone.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { useInkTheme } from "./InkProvider.js";
 import { inkText } from "./type.js";
 
@@ -104,7 +105,7 @@ export function InkEmptyState({
   action,
   style,
 }: {
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   title: string;
   children?: ReactNode;
   action?: ReactNode;
@@ -131,7 +132,7 @@ export function InkEmptyState({
         style,
       ]}
     >
-      {icon}
+      {renderIconSlot(icon, 32)}
       <Text style={[heading.style, { textAlign: "center" }]}>{title}</Text>
       {typeof children === "string" ? (
         <Text style={[body.style, { textAlign: "center", maxWidth: theme.measure.prose }]}>

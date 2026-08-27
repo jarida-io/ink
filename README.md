@@ -179,6 +179,38 @@ without waiting to cross anything on the way back.
 
 ---
 
+## Icons
+
+Name an icon in plain text. The same string works on both platforms.
+
+```tsx
+<InkButton icon="search">Find</InkButton>
+```
+
+Eighteen names resolve with nothing installed. Everything else you register once,
+from whichever icon package your platform has — Ink cannot depend on lucide
+because lucide is two packages, `lucide-react` and `lucide-react-native`, and
+neither runs where the other does:
+
+```tsx
+import { Search, Bell } from "lucide-react";      // or "lucide-react-native"
+registerIcons({ Search, Bell });
+```
+
+`Search`, `SearchIcon`, `LucideSearch` and `search` are one name — canonicalised
+on the key you register and the name you write, so an import can meet a call
+site. Size follows the control (`round(height * 0.45)` on the 4px grid: 16, 20,
+24) and stroke is compensated so every size carries a two-pixel line.
+
+Icons are `aria-hidden` by default, because an icon beside a word is a picture of
+that word. A name that does not resolve reserves its own space rather than
+collapsing the row, and never renders as text.
+
+See **[docs/ICONS.md](docs/ICONS.md)** for the bundle-size measurements, the
+React Native renderer, and the build-time name check.
+
+---
+
 ## Spacing and borders
 
 Nothing here is a number somebody typed once.
@@ -221,6 +253,8 @@ so a row of twelve options spends one edge, not twelve.
   written for coding agents. Also the fastest reference for a human in a hurry.
 - **[docs/INVENTORY.md](docs/INVENTORY.md)** — every element, and the ones
   deliberately absent with the reason.
+- **[docs/ICONS.md](docs/ICONS.md)** — naming icons in plain text, sizing,
+  accessibility, bundle cost, and the CI check.
 - **[docs/GLASS.md](docs/GLASS.md)** — the material, and what is not implemented.
 - **[llms.txt](llms.txt)** — machine-readable summary.
 

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    // The one part of Ink that runs on Node rather than in an app. It reads a
+    // source tree to find icon names nothing will answer, so it needs `fs` —
+    // and it is built separately precisely so that need cannot leak: the main
+    // build still compiles with `types: []`, and a `process` or a `require`
+    // reaching the library proper is still a build failure there.
+    "lib": ["ES2020"],
+    "types": ["node"]
+  },
+  "include": ["src/sweep"],
+  "exclude": ["**/*.test.ts"]
+}

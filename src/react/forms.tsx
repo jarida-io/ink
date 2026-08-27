@@ -1,3 +1,4 @@
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 /**
  * The form controls.
  *
@@ -362,7 +363,7 @@ export function InkRadioGroup<T extends string>({
 export interface InkMenuItem {
   key: string;
   label: string;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   onPress?: () => void;
   disabled?: boolean;
   /** Draws a rule above this item. For separating the destructive one. */
@@ -458,7 +459,7 @@ export function InkMenu({
                 setOpen(false);
               }}
             >
-              {item.icon}
+              {renderIconSlot(item.icon)}
               {item.label}
             </button>
           ))}

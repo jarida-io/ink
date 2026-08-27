@@ -9,6 +9,8 @@
  * JavaScript import graph breaks every consumer whose bundler does not handle
  * it, and this one has to survive Vite, Next and a Tauri build.
  */
+export { InkIcon, renderIconSlot } from "./icon.js";
+export type { InkIconProps, InkIconSlot } from "./icon.js";
 export { InkProvider, useInkTheme, usePrefersReducedMotion } from "./InkProvider.js";
 export type { InkProviderProps, InkProviderMode } from "./InkProvider.js";
 export {

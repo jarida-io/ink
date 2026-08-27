@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { toneColors, type InkTone } from "../core/tone.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { useInkTheme } from "./InkProvider.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
@@ -83,7 +84,7 @@ export function InkEmptyState({
   action,
   className,
 }: {
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   title: string;
   children?: ReactNode;
   action?: ReactNode;
@@ -91,7 +92,7 @@ export function InkEmptyState({
 }) {
   return (
     <div className={cx("ink-empty", className)}>
-      {icon ? <span className="ink-empty__icon">{icon}</span> : null}
+      {icon ? <span className="ink-empty__icon">{renderIconSlot(icon, 32)}</span> : null}
       <p className="ink-empty__title">{title}</p>
       {children ? <p className="ink-prose">{children}</p> : null}
       {action}

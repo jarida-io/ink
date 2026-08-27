@@ -19,5 +19,5 @@
     "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx", "src/native"]
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "src/native", "src/sweep"]
 }

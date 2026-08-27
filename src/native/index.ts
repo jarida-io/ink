@@ -12,6 +12,8 @@
  * Load the fonts before rendering anything — `requiredNativeFonts()` lists
  * every family name Expo has to register.
  */
+export { InkIcon, renderIconSlot } from "./icon.js";
+export type { InkIconProps, InkIconSlot } from "./icon.js";
 export { InkProvider, useInkTheme, useReduceMotion } from "./InkProvider.js";
 export type { InkProviderProps } from "./InkProvider.js";
 export { InkEdge } from "./InkEdge.js";

@@ -19,6 +19,7 @@ import {
 import { filterItems, highlight } from "../headless/filter.js";
 import { pageSlots } from "../headless/pagination.js";
 import { toneColors, type InkTone } from "../core/tone.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { useInkTheme } from "./InkProvider.js";
 import { InkAvatar, InkSpinner } from "./feedback.js";
 import { inkText } from "./type.js";
@@ -30,7 +31,7 @@ import { inkText } from "./type.js";
 
 export interface InkChipProps {
   tone?: InkTone;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   onPress?: () => void;
   onRemove?: () => void;
   selected?: boolean;
@@ -94,7 +95,7 @@ export function InkChip({
           paddingRight: onRemove ? theme.space[1] : theme.space[4],
         }}
       >
-        {icon}
+        {renderIconSlot(icon, 16)}
         <Text style={text.style}>{children}</Text>
       </Body>
 
@@ -1056,7 +1057,7 @@ export function InkFab({
   style,
 }: {
   label: string;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   onPress?: () => void;
   extended?: boolean;
   position?: "bottom-end" | "bottom-start" | "static";
@@ -1095,7 +1096,7 @@ export function InkFab({
         style,
       ]}
     >
-      {icon ?? (
+      {renderIconSlot(icon, 24) ?? (
         <Text style={inkText(theme, { size: "xl", weight: theme.weight.bold, color: theme.color.textOnAccent }).style}>
           +
         </Text>
@@ -1119,8 +1120,8 @@ export function InkSpeedDial({
   style,
 }: {
   label: string;
-  actions: { key: string; label: string; icon?: ReactNode; onPress?: () => void }[];
-  icon?: ReactNode;
+  actions: { key: string; label: string; icon?: InkIconSlot; onPress?: () => void }[];
+  icon?: InkIconSlot;
   position?: "bottom-end" | "bottom-start" | "static";
   style?: StyleProp<ViewStyle>;
 }) {
@@ -1187,7 +1188,7 @@ export function InkSpeedDial({
                   backgroundColor: theme.color.surface,
                 }}
               >
-                {action.icon}
+                {renderIconSlot(action.icon)}
               </View>
             </Pressable>
           ))}

@@ -26,6 +26,7 @@ import { stageHasMaterial, type NavbarStage } from "../headless/navbar.js";
 import { controlMetrics } from "../tokens/control.js";
 import { glassLift, glassSurface } from "../tokens/glass.js";
 import { useInkTheme } from "./InkProvider.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { inkText } from "./type.js";
 
 export type InkNavbarVariant = "sticky" | "floating" | "static";
@@ -33,7 +34,7 @@ export type InkNavbarVariant = "sticky" | "floating" | "static";
 export interface InkNavbarAction {
   key: string;
   label: string;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   onPress?: () => void;
   primary?: boolean;
 }
@@ -175,7 +176,7 @@ export function InkNavbar({
             paddingHorizontal: theme.space[2],
           }}
         >
-          {action.icon ?? <Text style={inkText(theme, { weight: theme.weight.semibold }).style}>{action.label}</Text>}
+          {renderIconSlot(action.icon) ?? <Text style={inkText(theme, { weight: theme.weight.semibold }).style}>{action.label}</Text>}
         </Pressable>
       ))}
     </Animated.View>
@@ -216,7 +217,7 @@ export function InkNavbar({
               backgroundColor: theme.color.surface,
             }}
           >
-            {primary?.icon ?? <PuckMark colour={theme.color.text} />}
+            {renderIconSlot(primary?.icon) ?? <PuckMark colour={theme.color.text} />}
           </Pressable>
         </Animated.View>
       ) : null}

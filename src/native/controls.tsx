@@ -12,6 +12,7 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { edgeStateFor } from "../core/edge.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { useEdgeBudget } from "../shared/budget.js";
 import { hitSlop } from "../core/reach.js";
 import { InkEdge } from "./InkEdge.js";
@@ -32,7 +33,7 @@ export interface InkButtonProps {
   onPress?: () => void;
   disabled?: boolean;
   block?: boolean;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
 }
@@ -75,7 +76,7 @@ export function InkButton({
         backgroundColor: fill,
       }}
     >
-      {icon}
+      {renderIconSlot(icon)}
       <Text style={label.style}>{children}</Text>
     </View>
   );

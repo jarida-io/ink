@@ -56,7 +56,11 @@
     "./css": "./dist/css/ink.css",
     "./ink.css": "./dist/css/ink.css",
     "./vite-alias": "./vite-alias.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./sweep": {
+      "types": "./dist/sweep/index.d.ts",
+      "default": "./dist/sweep/index.js"
+    }
   },
   "files": [
     "dist",
@@ -67,17 +71,18 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "npm run build:web && npm run build:native && npm run build:css",
+    "build": "npm run build:web && npm run build:native && npm run build:sweep && npm run build:css",
     "build:web": "tsc -p tsconfig.build.json",
     "build:native": "tsc -p tsconfig.build.native.json",
     "build:css": "mkdir -p dist/css && cp src/css/ink.css dist/css/ink.css",
     "clean": "rm -rf dist",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.build.sweep.json --noEmit && tsc -p tsconfig.test.json",
     "typecheck:native": "tsc -p tsconfig.native.json",
     "test": "vitest run",
     "verify": "npm run typecheck && npm run typecheck:native && npm run test",
     "prepublishOnly": "npm run clean && npm run verify && npm run build",
-    "gallery": "npm run build && node scripts/build-gallery.mjs gallery.html"
+    "gallery": "npm run build && node scripts/build-gallery.mjs gallery.html",
+    "build:sweep": "tsc -p tsconfig.build.sweep.json"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -92,10 +97,12 @@
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.18",
     "happy-dom": "^20.11.2",
+    "lucide-static": "1.34.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "@types/node": "^24.9.2"
   },
   "publishConfig": {
     "access": "public"

@@ -3,6 +3,7 @@
  */
 import type { CSSProperties, ReactNode } from "react";
 import { toneColors, type InkTone } from "../core/tone.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { useInkTheme } from "./InkProvider.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
@@ -61,7 +62,7 @@ export function InkProse({ className, children }: { className?: string; children
 
 export interface InkBadgeProps {
   tone?: InkTone;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   className?: string;
   children: ReactNode;
 }
@@ -70,7 +71,7 @@ export function InkBadge({ tone = "neutral", icon, className, children }: InkBad
   const { color } = useInkTheme();
   return (
     <span className={cx("ink-badge", className)} style={toneVars(tone, color)}>
-      {icon}
+      {renderIconSlot(icon, 16)}
       {children}
     </span>
   );
@@ -84,7 +85,7 @@ export function InkBadge({ tone = "neutral", icon, className, children }: InkBad
 
 export interface InkNoticeProps {
   tone?: InkTone;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   className?: string;
   children: ReactNode;
 }
@@ -99,7 +100,7 @@ export function InkNotice({ tone = "neutral", icon, className, children }: InkNo
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
     >
-      {icon}
+      {renderIconSlot(icon)}
       {children}
     </p>
   );
@@ -167,7 +168,7 @@ export function InkStage({ className, children }: { className?: string; children
 
 export interface InkChipProps {
   tone?: InkTone;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   /** Makes the chip itself pressable. */
   onPress?: () => void;
   /** Adds a remove control. Its label names what is being removed. */
@@ -194,7 +195,7 @@ export function InkChip({
 
   const body = (
     <>
-      {icon ? <span className="ink-chip__icon">{icon}</span> : null}
+      {icon ? <span className="ink-chip__icon">{renderIconSlot(icon, 16)}</span> : null}
       <span className="ink-chip__label">{children}</span>
     </>
   );

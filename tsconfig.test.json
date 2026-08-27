@@ -2,7 +2,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     // The tests read the product's stylesheet off disk to check the library
-    // against it, so they — and only they — get Node.
+    // against it, so they get Node. The only other place that does is
+    // `src/sweep`, which is a build-time tool and has its own config.
     "types": ["node"]
   },
   "include": ["src"],

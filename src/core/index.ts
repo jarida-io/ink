@@ -7,6 +7,7 @@
  * renderer rather than each one re-deriving them.
  */
 export * from "./env.js";
+export * from "./icons.js";
 export * from "./font.js";
 export * from "./edge.js";
 export * from "./reach.js";

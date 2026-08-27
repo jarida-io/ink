@@ -169,6 +169,8 @@ declare module "react-native" {
     accessibilityValue?: AccessibilityValue;
     accessibilityLiveRegion?: "none" | "polite" | "assertive";
     importantForAccessibility?: "auto" | "yes" | "no" | "no-hide-descendants";
+    /** iOS half of hiding a decorative element. Android uses the line above. */
+    accessibilityElementsHidden?: boolean;
   }
 
   export interface ViewProps extends AccessibilityProps {

@@ -68,6 +68,48 @@ const calendar = `
 
 // Counted from the built entry point rather than typed, so it cannot go stale
 // the way "16 components" did on the first version of this page.
+
+// ── Icons ──────────────────────────────────────────────────────────────────
+//
+// The gallery draws icons the same way the library does: from node data, on a
+// 24 grid, with the stroke compensated so every size carries the same weight.
+// `lucide-static` is a devDependency and pure data — no renderer, no React —
+// which is exactly the form the library consumes, so what is on this page is
+// what a consumer gets rather than a hand-tuned imitation.
+const ICON_NODES = JSON.parse(
+  readFileSync(resolve(ROOT, "node_modules/lucide-static/icon-nodes.json"), "utf8"),
+);
+
+function icon(name, size = 20) {
+  const node = ICON_NODES[name];
+  if (!node) throw new Error(`gallery: no icon named "${name}"`);
+  const body = node
+    .map(([tag, attrs]) => {
+      const a = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(" ");
+      return `<${tag} ${a} />`;
+    })
+    .join("");
+  // The same compensation `iconStrokeWidth` performs: desired * 24 / rendered.
+  const stroke = ((2 * 24) / size).toFixed(3);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="var(--ink-tone-fg, currentColor)" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
+}
+
+const { HOUSE_ICONS } = await import(resolve(ROOT, "dist/core/house-icons.js"));
+const HOUSE_NAMES = Object.keys(HOUSE_ICONS);
+
+const WALL = [
+  "house", "user", "users", "settings", "bell", "mail", "calendar", "clock",
+  "file-text", "folder", "image", "video", "mic", "volume-2", "headphones", "music",
+  "heart", "bookmark", "flag", "tag", "pin", "map", "compass", "globe",
+  "download", "upload", "share-2", "link", "paperclip", "printer", "save", "trash-2",
+  "pencil", "copy", "scissors", "clipboard", "funnel", "list", "grid-2x2", "layers",
+  "lock", "lock-open", "key", "shield", "eye", "eye-off", "wifi", "battery",
+  "sun", "moon", "cloud", "droplet", "flame", "leaf", "star", "sparkles",
+  "play", "pause", "skip-forward", "repeat", "shuffle", "rewind",
+  "credit-card", "shopping-cart", "gift", "package", "truck", "store",
+  "code", "terminal", "database", "server", "cpu", "git-branch",
+];
+
 const reactEntry = readFileSync(resolve(ROOT, "src/react/index.ts"), "utf8");
 const componentCount = new Set(
   [...reactEntry.matchAll(/^export\s+\{([^}]+)\}/gm)]
@@ -76,7 +118,8 @@ const componentCount = new Set(
     .filter((n) => n.startsWith("Ink")),
 ).size;
 
-const html = `<title>Ink Components</title>
+const html = `<meta charset="utf-8">
+<title>Ink Components</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -214,6 +257,88 @@ code {
 .themeToggle:hover { border-color: var(--color-text); }
 
 @media (prefers-reduced-motion: reduce) { * { animation-duration: 1ms !important; } }
+
+/* ── Icons ──────────────────────────────────────────────────────────────── */
+.iconPanel {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--pad-lg);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-content);
+}
+.iconDemo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.iconWall {
+  display: grid;
+  /* Follows the column rather than a fixed count, so the wall reflows to a
+     phone instead of scrolling sideways. */
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--space-2);
+}
+.iconWall figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+.iconWall figure:hover { background: var(--color-surface); color: var(--color-text); }
+.iconWall figcaption {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+}
+.sizeLadder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  align-items: flex-end;
+}
+.sizeLadder > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sizeLadder em {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  color: var(--color-text-secondary);
+}
+.sizeLadder[data-uncompensated] { opacity: 0.75; }
+/* What the library renders for a name that did not resolve. */
+.iconGap {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--color-destructive, #b3261e);
+}
+.iconWarn {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+}
 </style>
 
 <div class="wrap">
@@ -322,6 +447,132 @@ code {
   </section>
 
   <!-- ── The edge ───────────────────────────────────────────────────────── -->
+  <section id="icons">
+    <h2>Icons</h2>
+    <p class="lede">
+      Name an icon in plain text and it draws — the same string on the web and on
+      device. <code>Search</code>, <code>SearchIcon</code>, <code>LucideSearch</code>
+      and <code>search</code> are one name. Eighteen ship built in; the rest arrive
+      from whichever icon package your platform actually has.
+    </p>
+
+    <div class="row">
+      <div class="iconPanel">
+        <span class="ink-eyebrow">One name, every component</span>
+        <p class="ink-prose">Nothing below sets a size or a colour. Each component asks for
+        the size its own geometry derives, and the icon takes the colour of the text
+        or the tone of the container it lands in.</p>
+        <div class="iconDemo">
+          <button class="ink-btn ink-btn--primary">${icon("search")}Search</button>
+          <button class="ink-btn ink-btn--quiet">${icon("download")}Export</button>
+          <button class="ink-btn ink-btn--quiet" aria-label="Settings">${icon("settings")}</button>
+          <span class="ink-chip" data-selected><span class="ink-chip__press"><span class="ink-chip__icon">${icon("check", 16)}</span><span class="ink-chip__label">Selected</span></span></span>
+          <span class="ink-chip"><span class="ink-chip__press"><span class="ink-chip__icon">${icon("funnel", 16)}</span><span class="ink-chip__label">Filtered</span></span></span>
+          <span class="ink-badge" style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)">${icon("check", 16)}Ready</span>
+          <span class="ink-badge" style="--ink-tone-fg: var(--color-destructive-fg); --ink-tone-soft: var(--color-destructive-soft)">${icon("triangle-alert", 16)}Failed</span>
+        </div>
+        <div class="iconDemo">
+          <p class="ink-notice" role="status" style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)">${icon("check")}Saved to this device.</p>
+          <p class="ink-notice" role="alert" style="--ink-tone-fg: var(--color-destructive-fg); --ink-tone-soft: var(--color-destructive-soft)">${icon("triangle-alert")}That name is already taken.</p>
+        </div>
+        <p class="ink-prose" style="margin-top:var(--space-4)">The two notices are the
+        same markup with a different tone. The icons follow, because a stroke reading
+        <code>var(--ink-tone-fg, currentColor)</code> is red in one and green in the
+        other without anyone passing a colour.</p>
+      </div>
+
+      <div class="iconPanel">
+        <span class="ink-eyebrow">In a list, a menu, a rail</span>
+        <div class="ink-list" role="list" aria-label="Files">
+          <button class="ink-listitem ink-listitem--pressable" role="listitem" data-selected>
+            <span class="ink-listitem__lead">${icon("file-text", 24)}</span>
+            <span class="ink-listitem__text"><span class="ink-listitem__title">Quarterly notes</span><span class="ink-listitem__desc">Edited 2 hours ago</span></span>
+            <span class="ink-listitem__trail">${icon("chevron-right", 20)}</span>
+          </button>
+          <button class="ink-listitem ink-listitem--pressable" role="listitem">
+            <span class="ink-listitem__lead">${icon("image", 24)}</span>
+            <span class="ink-listitem__text"><span class="ink-listitem__title">Cover photo</span><span class="ink-listitem__desc">2.4 MB</span></span>
+            <span class="ink-listitem__trail">${icon("chevron-right", 20)}</span>
+          </button>
+          <button class="ink-listitem ink-listitem--pressable" role="listitem">
+            <span class="ink-listitem__lead">${icon("music", 24)}</span>
+            <span class="ink-listitem__text"><span class="ink-listitem__title">Interview take 3</span><span class="ink-listitem__desc">18 minutes</span></span>
+            <span class="ink-listitem__trail">${icon("chevron-right", 20)}</span>
+          </button>
+        </div>
+        <div class="frame" style="margin-top:var(--space-4)"><div class="ink-menu">
+          <button class="ink-menu__item" role="menuitem">${icon("pencil")}Rename</button>
+          <button class="ink-menu__item" role="menuitem">${icon("copy")}Duplicate</button>
+          <button class="ink-menu__item" role="menuitem">${icon("share-2")}Share</button>
+          <button class="ink-menu__item" role="menuitem">${icon("trash-2")}Delete</button>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="iconPanel">
+        <span class="ink-eyebrow">One weight at every size</span>
+        <p class="ink-prose">Icon size is derived from the control's height —
+        <code>round(height &times; 0.45)</code> on the 4px grid — so 32, 44 and 52 give
+        16, 20 and 24. <strong>52 lands on 24 deliberately</strong>: that is the grid the
+        artwork is drawn on, and the one size where it is untouched.</p>
+        <div class="sizeLadder">
+          <span>${icon("bell", 16)}<em>16 &middot; sm</em></span>
+          <span>${icon("bell", 20)}<em>20 &middot; md</em></span>
+          <span>${icon("bell", 24)}<em>24 &middot; lg</em></span>
+          <span>${icon("bell", 32)}<em>32</em></span>
+          <span>${icon("bell", 48)}<em>48</em></span>
+        </div>
+        <p class="ink-prose" style="margin-top:var(--space-4)">Every bell above carries a
+        two-pixel line. Scaling a 24px drawing down would have thinned it to 1.33px at
+        16 — beside a 24px icon that reads as two different font weights, which is the
+        defect this compensation exists to prevent.</p>
+        <div class="sizeLadder" data-uncompensated>
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_NODES["bell"].map(([t, a]) => `<${t} ${Object.entries(a).map(([k, v]) => `${k}="${v}"`).join(" ")} />`).join("")}</svg><em>16 uncompensated</em></span>
+          <span><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_NODES["bell"].map(([t, a]) => `<${t} ${Object.entries(a).map(([k, v]) => `${k}="${v}"`).join(" ")} />`).join("")}</svg><em>48 uncompensated</em></span>
+        </div>
+        <p class="ink-prose">The pair above is what the library does <em>not</em> do: the
+        same glyph, stroke left alone, hairline at 16 and heavy at 48.</p>
+      </div>
+
+      <div class="iconPanel">
+        <span class="ink-eyebrow">The house set &mdash; ${HOUSE_NAMES.length} names, nothing installed</span>
+        <p class="ink-prose">These resolve on a fresh install with no icon package and no
+        registration. They are the glyphs the library needs for its own chrome, and they
+        are drawn on the same grid as everything else so a mixture never shows.</p>
+        <div class="iconWall">
+          ${HOUSE_NAMES.map((n) => `<figure>${icon(n, 24)}<figcaption>${n}</figcaption></figure>`).join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="iconPanel">
+      <span class="ink-eyebrow">Anything you register</span>
+      <p class="ink-prose">Below is a sample of a registered lucide set, drawn by Ink from
+      lucide's own geometry. Register the icons you use rather than the whole package:
+      a named object of 40 icons costs 3.9&nbsp;KB gzipped, where handing over the entire
+      <code>icons</code> namespace costs 133.8&nbsp;KB, because a bundler cannot shake a
+      set it has to index by a variable.</p>
+      <div class="iconWall">
+        ${WALL.map((n) => `<figure>${icon(n, 24)}<figcaption>${n}</figcaption></figure>`).join("")}
+      </div>
+    </div>
+
+    <div class="iconPanel">
+      <span class="ink-eyebrow">When the name is wrong</span>
+      <p class="ink-prose">A name that does not resolve reserves exactly the space the icon
+      would have taken, so correcting the spelling never reflows the row around it. In
+      development it also outlines that space, because a console warning scrolls away and
+      a red box does not. It never renders the name as text &mdash; a raw word shipped
+      into production UI reads as finished work.</p>
+      <div class="iconDemo">
+        <button class="ink-btn ink-btn--quiet">${icon("search")}Correct</button>
+        <button class="ink-btn ink-btn--quiet"><span class="iconGap" data-ink-icon-missing="serach"></span>Misspelled</button>
+      </div>
+      <pre class="iconWarn"><code>ink: no icon named "serach". Did you mean "search"?</code></pre>
+    </div>
+  </section>
+
   <section id="surfaces">
     <h2>Surfaces</h2>
     <p class="sec-note">The edge is a 2px border printed 4px above a hard plate. Hover lifts it, pressing drives it down into the plate and lands the face where the plate was. The plate never moves &mdash; which is what makes it drawable in two views on React Native.</p>
@@ -658,7 +909,7 @@ code {
           <span class="ink-chip ink-chip--removable" data-selected style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)"><span class="ink-chip__press"><span class="ink-chip__label">Grade A</span></span><button class="ink-chip__remove" type="button" aria-label="Remove Grade A">&times;</button></span>
         </div>
 
-        <div class="col">
+        <div class="iconPanel">
           <div class="ink-search" style="max-width:340px">
             <span class="ink-search__glass" aria-hidden="true"></span>
             <input type="search" placeholder="Search what it remembers" aria-label="Search" value="se" id="searchDemo">
@@ -720,7 +971,7 @@ code {
 
     <div class="spec">
       <div class="demo row">
-        <div class="col">
+        <div class="iconPanel">
           <span class="ink-eyebrow">Number field</span>
           <div class="ink-number">
             <button class="ink-number__step" type="button" aria-label="Decrease quantity">&minus;</button>

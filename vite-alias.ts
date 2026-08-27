@@ -28,6 +28,7 @@ export function inkAlias(packageRoot: string): AliasEntry[] {
     { find: /^@jarida\/ink\/headless$/, replacement: `${src}/headless/index.ts` },
     { find: /^@jarida\/ink\/tokens$/, replacement: `${src}/tokens/index.ts` },
     { find: /^@jarida\/ink\/core$/, replacement: `${src}/core/index.ts` },
+    { find: /^@jarida\/ink\/sweep$/, replacement: `${src}/sweep/index.ts` },
     { find: /^@jarida\/ink\/(?:css|ink\.css)$/, replacement: `${src}/css/ink.css` },
     { find: /^@jarida\/ink\/(.*)$/, replacement: `${src}/$1` },
   ];

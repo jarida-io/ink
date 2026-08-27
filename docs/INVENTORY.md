@@ -80,6 +80,7 @@ why, so the next person does not spend a day rediscovering it.
 | `InkNotice` | **Shipped** | Says what happened, not that something did |
 | `InkMeter` | **Shipped** | Paces rather than inventing a percentage |
 | `InkBadge` | **Shipped** | A fact, set in mono |
+| `InkIcon` | **Shipped** | Named in plain text. Decorative unless labelled; a missing name reserves its space rather than collapsing the row. See [ICONS.md](ICONS.md) |
 | `InkSpinner` | **Shipped** | Requires a label. A spinner that cannot say what it is waiting for is a spinner that is lying |
 | `InkSkeleton` | **Shipped** | The shape of the content before the content, so the layout does not jump |
 | `InkEmptyState` | **Shipped** | An invitation to act, not a mood |

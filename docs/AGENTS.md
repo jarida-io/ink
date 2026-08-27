@@ -20,6 +20,7 @@ for it. Look here first.
 | `@jarida/ink/css` | the stylesheet | nothing |
 | `@jarida/ink/react` | React DOM components | `react` |
 | `@jarida/ink/native` | React Native components | `react`, `react-native` |
+| `@jarida/ink/sweep` | build-time icon-name check | `node:fs` |
 
 `react-native` is an **optional** peer. Importing `@jarida/ink` or
 `@jarida/ink/react` in a project without it works.
@@ -76,7 +77,7 @@ for (const [k, v] of Object.entries(cssVariables(theme))) {
 }
 ```
 
-Then write markup with the documented classes and `data-` attributes (§7). The
+Then write markup with the documented classes and `data-` attributes (§8). The
 CSS does the appearance; the headless module does the behaviour. There is no
 React in either.
 
@@ -336,7 +337,82 @@ usePrefersReducedMotion()  (react)   useReduceMotion()  (native)
 
 ---
 
-## 6. Rules the API enforces
+## 6. Icons — `icon="search"`
+
+Every `icon` prop takes a **name** or an element. Names work identically on both
+platforms.
+
+```tsx
+<InkButton icon="search">Find</InkButton>
+<InkIcon name="bell" label="Notifications" size={24} />
+```
+
+**Setup, once, at the entry point.** Ink cannot depend on lucide: it is two
+packages (`lucide-react`, `lucide-react-native`) and neither runs where the
+other does. So you inject the set.
+
+```ts
+import { registerIcons } from "@jarida/ink";
+import { Search, Bell } from "lucide-react";      // or "lucide-react-native"
+registerIcons({ Search, Bell });
+```
+
+**Register named imports, not the namespace.** Measured, gzipped: 3 named
+imports 1.2 KB, a 40-icon object literal 3.9 KB, the whole `icons` namespace
+133.8 KB. A bundler cannot shake a set indexed by a variable. Metro does not
+shake at all.
+
+**Names are canonicalised on both sides.** `Search`, `SearchIcon`,
+`LucideSearch`, `search`, `Search Icon`, `search_icon` → one key. A second
+lookup ignores hyphenation, covering the 32 lucide names whose export and
+filename disagree (`ArrowDownAZ` ↔ `arrow-down-a-z`).
+
+**18 names always resolve**, with nothing installed: `menu` `x` `check`
+`chevron-down` `chevron-up` `chevron-left` `chevron-right` `ellipsis` `plus`
+`minus` `search` `arrow-left` `arrow-right` `circle` `info` `triangle-alert`
+`star` `loader-circle`.
+
+**Size is derived, stroke is compensated.**
+
+```ts
+controlIconSize("sm" | "md" | "lg")   // 16 | 20 | 24  = round(height * 0.45) on the 4px grid
+iconStrokeWidth(size)                 // 2 * 24 / size — every size renders a 2px line
+```
+
+**No colour prop.** An icon takes surrounding text colour, or its container's
+tone via `var(--ink-tone-fg, currentColor)`. Pass `tone` to set one.
+
+**Decorative by default.** `aria-hidden` + `focusable="false"` on web;
+`accessibilityElementsHidden` *and* `importantForAccessibility` on native (both,
+or it doubles labels on one OS). `label` opts in to `role="img"`.
+
+**Failure is loud in dev, safe at runtime.** An unresolved name renders a
+reserved box of the exact icon size — never the name as text — outlined in dev.
+`resolveIcon` returns `ok` / `bare` (nothing registered) / `unknown` (with a
+suggestion), and warnings fire once per message.
+
+**Icon data on React Native** needs a renderer, handed over once:
+
+```ts
+import * as Svg from "react-native-svg";
+configureIconPrimitives(Svg);
+```
+
+Only needed for geometry (the house set, or a set from `lucide-static`).
+Registered components bring their own renderer.
+
+**CI check** — `sweepIconNames(dir, known)` from `@jarida/ink/sweep` reads source
+for literal names nothing will answer. Skips `*.test.*` and comments; ignores
+non-literals.
+
+**Do not** call `renderIconSlot` from a hook position — it is a plain function on
+purpose, because icons render inside `.map()` over ResizeObserver-derived lists.
+
+Full detail: [ICONS.md](ICONS.md).
+
+---
+
+## 7. Rules the API enforces
 
 An agent writing Ink code should expect these and not fight them.
 
@@ -359,7 +435,7 @@ An agent writing Ink code should expect these and not fight them.
 
 ---
 
-## 7. Driving the CSS without React
+## 8. Driving the CSS without React
 
 Classes and attributes the stylesheet reads, for a non-React binding.
 
@@ -388,7 +464,7 @@ element's face; the plate never moves.
 
 ---
 
-## 8. Cross-platform differences (all four)
+## 9. Cross-platform differences (all four)
 
 | | React | React Native |
 |---|---|---|
@@ -400,7 +476,7 @@ element's face; the plate never moves.
 
 ---
 
-## 9. Common tasks
+## 10. Common tasks
 
 **Theme an app and let existing CSS pick it up**
 ```tsx
@@ -430,7 +506,7 @@ fs.writeFileSync("tokens.css",
 
 ---
 
-## 10. Against Material UI
+## 11. Against Material UI
 
 A component-by-component map is in [MUI-MAP.md](./MUI-MAP.md) — useful as a
 migration table and as a check that nothing obvious is missing. Where the two
@@ -439,7 +515,7 @@ component was doing two jobs and Ink split it (Text Field into input / textarea
 / search; Typography by job rather than by tag; Progress into bar / ring /
 spinner / dots).
 
-## 11. What is deliberately absent
+## 12. What is deliberately absent
 
 Do not add these; they were considered and refused. See
 [INVENTORY.md](./INVENTORY.md).

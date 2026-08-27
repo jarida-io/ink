@@ -21,10 +21,11 @@ import { stageHasMaterial, type NavbarStage } from "../headless/navbar.js";
 import { BAR_MAX, badgeText, fitBar, shapeFor, type NavDestination, type NavShape } from "../headless/nav.js";
 import { glassLift, glassSurface } from "../tokens/glass.js";
 import { useInkTheme } from "./InkProvider.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { inkText } from "./type.js";
 
 export interface InkNavDestination extends NavDestination {
-  icon?: ReactNode;
+  icon?: InkIconSlot;
 }
 
 interface CommonProps {
@@ -99,7 +100,7 @@ function BadgeInline({ badge }: { badge: InkNavDestination["badge"] }) {
 
 export interface InkBottomBarProps extends CommonProps {
   moreLabel?: string;
-  moreIcon?: ReactNode;
+  moreIcon?: InkIconSlot;
   onMore?: (overflow: InkNavDestination[]) => void;
   /** Home-indicator inset. A number rather than a safe-area dependency. */
   bottomInset?: number;
@@ -165,7 +166,7 @@ export function InkBottomBar({
   const floating = variant === "floating";
 
   const slot = (
-    item: { key: string; label: string; icon?: ReactNode; badge?: NavDestination["badge"]; disabled?: boolean },
+    item: { key: string; label: string; icon?: InkIconSlot; badge?: NavDestination["badge"]; disabled?: boolean },
     selected: boolean,
     onPress: () => void,
   ) => {
@@ -206,7 +207,7 @@ export function InkBottomBar({
           }}
         />
         <View>
-          {item.icon}
+          {renderIconSlot(item.icon, 24)}
           <Badge badge={item.badge} />
         </View>
         {layout.iconsOnly ? null : (
@@ -281,7 +282,7 @@ export function InkBottomBar({
               justifyContent: "center",
             }}
           >
-            {current?.icon ?? moreIcon}
+            {renderIconSlot(current?.icon, 24) ?? renderIconSlot(moreIcon, 24)}
           </Pressable>
         </Animated.View>
       ) : null}
@@ -426,7 +427,7 @@ export function InkSidebar({
                     }}
                   />
                   <View>
-                    {item.icon}
+                    {renderIconSlot(item.icon)}
                     {/* On a rail the badge sits on the glyph, because that is
                         all there is. With a label it goes to the end of the
                         row — on the glyph it prints through the first word. */}

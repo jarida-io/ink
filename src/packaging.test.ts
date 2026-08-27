@@ -93,6 +93,27 @@ describe("what ships", () => {
     expect(missingFromWeb, "native exports these and web does not").toEqual([]);
   });
 
+  it("wires every entry point into the bundler alias as well", () => {
+    // Ink is consumed from source, so an entry point is two declarations: the
+    // `exports` map for a published install, and `vite-alias.ts` for the
+    // development path. Adding one and forgetting the other leaves a subpath
+    // that resolves for consumers and 404s for the people writing it — and the
+    // catch-all rule hides it, because it resolves to a path with no extension
+    // rather than failing outright.
+    const pkg = JSON.parse(readFileSync(join(SRC, "..", "package.json"), "utf8"));
+    const alias = readFileSync(join(SRC, "..", "vite-alias.ts"), "utf8");
+
+    const unwired = Object.keys(pkg.exports)
+      .filter((entry) => entry.startsWith("./"))
+      .map((entry) => entry.slice(2))
+      // These are not modules the alias resolves: one is a file read by tooling,
+      // the other two are the stylesheet, which has its own rule.
+      .filter((name) => !["package.json", "vite-alias", "css", "ink.css"].includes(name))
+      .filter((name) => !new RegExp(`\\bink\\\\/${name}\\$`).test(alias));
+
+    expect(unwired, "these are exported but have no vite-alias entry").toEqual([]);
+  });
+
   it("keeps the DOM out of the platform-neutral half", () => {
     // `src/core` and `src/tokens` run on a device. A `document` there is a
     // crash, and the native type-check is the only thing that would catch it —

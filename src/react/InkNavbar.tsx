@@ -1,3 +1,4 @@
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 /**
  * The bar.
  *
@@ -49,7 +50,7 @@ export type InkNavbarMaterial = "auto" | "always" | "never";
 export interface InkNavbarAction {
   key: string;
   label: string;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   onPress?: () => void;
   /** Survives condensing, and is what the collapsed puck shows. One, at most. */
   primary?: boolean;
@@ -157,7 +158,7 @@ export function InkNavbar({
                         onClick={action.onPress}
                         aria-label={action.icon ? action.label : undefined}
                       >
-                        {action.icon ?? action.label}
+                        {renderIconSlot(action.icon) ?? action.label}
                       </button>
                     ))}
                   </div>
@@ -181,7 +182,7 @@ export function InkNavbar({
                 onStageChange?.("expanded");
               }}
             >
-              {primary?.icon ?? <span className="ink-navbar__puckMark" aria-hidden="true" />}
+              {renderIconSlot(primary?.icon) ?? <span className="ink-navbar__puckMark" aria-hidden="true" />}
               {collapsedBadge ? (
                 <span className="ink-navbar__puckBadge">{collapsedBadge}</span>
               ) : null}

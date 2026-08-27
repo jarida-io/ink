@@ -23,6 +23,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { hitSlop } from "../core/reach.js";
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { valueAt } from "../headless/slider.js";
 import { useInkTheme } from "./InkProvider.js";
 import { InkChoice } from "./controls.js";
@@ -497,7 +498,7 @@ export function InkRadioGroup<T extends string>({
 export interface InkMenuItem {
   key: string;
   label: string;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   onPress?: () => void;
   disabled?: boolean;
   separated?: boolean;
@@ -548,7 +549,7 @@ export function InkMenu({
                 opacity: item.disabled ? 0.45 : 1,
               }}
             >
-              {item.icon}
+              {renderIconSlot(item.icon)}
               <Text
                 style={
                   inkText(theme, {

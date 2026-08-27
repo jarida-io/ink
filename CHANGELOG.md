@@ -1,5 +1,40 @@
 # Changelog
 
+## Unreleased
+
+### Icons, named in plain text
+
+- **`icon="search"` anywhere an element used to go**, identical on web and React
+  Native. Every `icon` prop still accepts an element, so no call site breaks.
+- **A registry rather than a dependency.** Lucide ships as two packages that do
+  not run on each other's platform, so Ink owns the name and you inject the set.
+  Any icon source works — components or geometry.
+- **One canonical name.** `Search`, `SearchIcon`, `LucideSearch` and `search`
+  collapse to one key, applied to what you register *and* what you write.
+  A second lookup ignores hyphenation, which resolves the 32 lucide names whose
+  export and filename disagree, and collides with none of the other 1736.
+- **Eighteen built-in glyphs**, so a fresh install draws something. These replace
+  chrome the stylesheet used to draw by hand out of `<span>`s and borders.
+- **Derived size and compensated stroke** — `round(height * 0.45)` on the 4px
+  grid, and `2 * 24 / size` in the viewBox, so 16, 20, 24 and 48 all render a
+  two-pixel line instead of four different weights.
+- **Decorative by default**, `aria-hidden` on web and both OS-specific props on
+  native. `label` opts in to being announced.
+- **A missing name reserves its space** and never renders as text; in dev it is
+  outlined. Warnings distinguish "nothing registered" from "wrong name" and
+  carry a suggestion.
+- **`@jarida/ink/sweep`** — a build-time check for names nothing will answer,
+  reaching JavaScript callers, `as any`, and literals in data files.
+
+### Fixed
+
+- The gallery declares its own charset, so a locally built `gallery.html` no
+  longer renders em dashes as mojibake when served without one.
+- `packaging.test.ts` now fails if an entry point is added to `exports` without
+  a matching `vite-alias` rule — the catch-all rule had been hiding that, by
+  resolving the new path to a file with no extension rather than failing.
+
+
 ## 1.0.0
 
 First release. Extracted from Goose In A Pond, where the ink edge had been

@@ -1,3 +1,4 @@
+import { renderIconSlot, type InkIconSlot } from "./icon.js";
 /**
  * The three navigation shapes.
  *
@@ -26,7 +27,7 @@ function cx(...parts: (string | false | undefined | null)[]): string {
 }
 
 export interface InkNavDestination extends NavDestination {
-  icon?: ReactNode;
+  icon?: InkIconSlot;
 }
 
 interface CommonProps {
@@ -65,7 +66,7 @@ function Badge({ badge }: { badge: InkNavDestination["badge"] }) {
 export interface InkBottomBarProps extends CommonProps {
   /** Shown when there are more destinations than fit. */
   moreLabel?: string;
-  moreIcon?: ReactNode;
+  moreIcon?: InkIconSlot;
   onMore?: (overflow: InkNavDestination[]) => void;
   /** `floating` lifts it off the edge as a rounded pill. */
   variant?: "docked" | "floating";
@@ -153,7 +154,7 @@ export function InkBottomBar({
           disabled={item.disabled}
           onClick={() => onChange(item.key)}
         >
-          <span className="ink-nav__icon">{item.icon}</span>
+          <span className="ink-nav__icon">{renderIconSlot(item.icon, 24)}</span>
           {layout.iconsOnly ? null : <span className="ink-nav__label">{item.label}</span>}
           <Badge badge={item.badge} />
           {/* The selected mark, so the state is not carried by colour alone. */}
@@ -193,7 +194,7 @@ export function InkBottomBar({
             onStageChange?.("expanded");
           }}
         >
-          {current?.icon ?? <span className="ink-nav__more" aria-hidden="true" />}
+          {renderIconSlot(current?.icon, 24) ?? <span className="ink-nav__more" aria-hidden="true" />}
         </button>
       ) : null}
     </nav>
@@ -330,7 +331,7 @@ export function InkSidebar({
                 disabled={item.disabled}
                 onClick={() => onChange(item.key)}
               >
-                <span className="ink-nav__icon">{item.icon}</span>
+                <span className="ink-nav__icon">{renderIconSlot(item.icon)}</span>
                 {rail ? null : <span className="ink-nav__label">{item.label}</span>}
                 <Badge badge={item.badge} />
                 <span className="ink-nav__mark" aria-hidden="true" />
@@ -554,7 +555,7 @@ export function InkFab({
 }: {
   /** Always required: an icon-only control with no name is unusable. */
   label: string;
-  icon?: ReactNode;
+  icon?: InkIconSlot;
   onPress?: () => void;
   /** Shows the label beside the icon. */
   extended?: boolean;
@@ -571,7 +572,7 @@ export function InkFab({
       disabled={disabled}
       onClick={onPress}
     >
-      {icon ?? <span className="ink-fab__plus" aria-hidden="true" />}
+      {renderIconSlot(icon, 24) ?? <span className="ink-fab__plus" aria-hidden="true" />}
       {extended ? <span className="ink-fab__label">{label}</span> : null}
     </button>
   );
@@ -592,8 +593,8 @@ export function InkSpeedDial({
   className,
 }: {
   label: string;
-  actions: { key: string; label: string; icon?: ReactNode; onPress?: () => void }[];
-  icon?: ReactNode;
+  actions: { key: string; label: string; icon?: InkIconSlot; onPress?: () => void }[];
+  icon?: InkIconSlot;
   position?: "bottom-end" | "bottom-start" | "static";
   className?: string;
 }) {
@@ -628,7 +629,7 @@ export function InkSpeedDial({
             }}
           >
             <span className="ink-speeddial__actionLabel">{action.label}</span>
-            <span className="ink-speeddial__actionIcon">{action.icon}</span>
+            <span className="ink-speeddial__actionIcon">{renderIconSlot(action.icon)}</span>
           </button>
         ))}
       </div>
@@ -640,7 +641,7 @@ export function InkSpeedDial({
         aria-haspopup="menu"
         onClick={() => setOpen((o) => !o)}
       >
-        {icon ?? <span className="ink-fab__plus" aria-hidden="true" />}
+        {renderIconSlot(icon, 24) ?? <span className="ink-fab__plus" aria-hidden="true" />}
       </button>
     </div>
   );
