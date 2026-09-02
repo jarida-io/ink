@@ -65,7 +65,9 @@
   "files": [
     "dist",
     "src",
+    "!src/**/*.test.*",
     "types",
+    "docs",
     "vite-alias.ts",
     "README.md",
     "LICENSE"
