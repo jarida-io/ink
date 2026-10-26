@@ -135,5 +135,5 @@ export type {
 export { InkBubble, InkBubbleGroup, InkTyping } from "./chat.js";
 export type { InkBubbleProps, InkBubbleMessage, BubblePosition } from "./chat.js";
 export { InkDialog, InkSheet } from "./overlays.js";
-export type { InkDialogProps } from "./overlays.js";
+export type { InkDialogProps, InkSheetProps } from "./overlays.js";
 export { InkBudget, useInkBudget } from "../shared/budget.js";

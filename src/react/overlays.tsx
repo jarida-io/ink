@@ -6,7 +6,7 @@
  * a popover needs a portal and a positioning engine that React Native does not
  * have. `InkSheet` covers what a menu was being used for, with one behaviour.
  */
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -47,6 +47,8 @@ export function InkDialog({
   className,
 }: InkDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Per instance: two dialogs sharing one id label each other.
+  const titleId = useId();
 
   useEffect(() => {
     const node = ref.current;
@@ -59,7 +61,7 @@ export function InkDialog({
     <dialog
       ref={ref}
       className={cx("ink-dialog", className)}
-      aria-labelledby="ink-dialog-title"
+      aria-labelledby={titleId}
       onCancel={(e) => {
         // Escape reaches this even when the dialog is not dismissible, so it is
         // refused here rather than left to close something that must be
@@ -74,7 +76,7 @@ export function InkDialog({
       }}
     >
       <div className="ink-dialog__panel">
-        <h2 id="ink-dialog-title" className="ink-dialog__title">
+        <h2 id={titleId} className="ink-dialog__title">
           {title}
         </h2>
         {description ? <p className="ink-prose">{description}</p> : null}
@@ -92,22 +94,36 @@ export function InkDialog({
  * screen, and a thumb can reach the top of it.
  */
 
+export interface InkSheetProps {
+  open: boolean;
+  onClose: () => void;
+  side?: "bottom" | "right" | "left";
+  title: string;
+  description?: ReactNode;
+  /** False for a sheet that must be answered: no backdrop, no Escape. */
+  dismissible?: boolean;
+  /**
+   * The body scrolls once the sheet is as tall as the viewport allows. Turn it
+   * off only when the body brings its own list that must be the scroller.
+   */
+  scroll?: boolean;
+  children?: ReactNode;
+  className?: string;
+}
+
 export function InkSheet({
   open,
   onClose,
   side = "bottom",
   title,
+  description,
+  dismissible = true,
+  scroll = true,
   children,
   className,
-}: {
-  open: boolean;
-  onClose: () => void;
-  side?: "bottom" | "right" | "left";
-  title: string;
-  children?: ReactNode;
-  className?: string;
-}) {
+}: InkSheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const node = ref.current;
@@ -120,17 +136,25 @@ export function InkSheet({
     <dialog
       ref={ref}
       className={cx("ink-sheet", `ink-sheet--${side}`, className)}
-      aria-labelledby="ink-sheet-title"
-      onCancel={onClose}
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        if (!dismissible) e.preventDefault();
+        else onClose();
+      }}
       onClick={(e) => {
-        if (e.target === ref.current) onClose();
+        if (dismissible && e.target === ref.current) onClose();
       }}
     >
       <div className="ink-sheet__panel">
-        <h2 id="ink-sheet-title" className="ink-sheet__title">
-          {title}
-        </h2>
-        {children}
+        <div className="ink-sheet__head">
+          <h2 id={titleId} className="ink-sheet__title">
+            {title}
+          </h2>
+          {description ? <p className="ink-sheet__description">{description}</p> : null}
+        </div>
+        <div className="ink-sheet__body" data-scroll={scroll || undefined}>
+          {children}
+        </div>
       </div>
     </dialog>
   );

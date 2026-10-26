@@ -8,7 +8,17 @@ import { renderIconSlot, type InkIconSlot } from "./icon.js";
  * `InkInput` is for names, phrases and search; `InkSegmented` or `InkSelect` is
  * for everything with a list behind it.
  */
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type TextareaHTMLAttributes,
+} from "react";
 import { isRovingKey, rove } from "../headless/roving.js";
 import { filterItems, highlight } from "../headless/filter.js";
 
@@ -31,9 +41,20 @@ export interface InkInputProps {
   /** The message shown, and announced, when the value will not do. */
   invalid?: string;
   disabled?: boolean;
-  type?: "text" | "search" | "email" | "url" | "number";
-  lead?: ReactNode;
-  trail?: ReactNode;
+  type?: "text" | "search" | "email" | "url" | "number" | "password";
+  /** A string is an icon name; anything else is drawn as given. */
+  lead?: InkIconSlot;
+  trail?: InkIconSlot;
+  /** Enter. Pairs with `inputProps.enterKeyHint`. */
+  onSubmit?: () => void;
+  /**
+   * Everything else `<input>` takes — `autoComplete`, `name`, `id`, a ref. The
+   * field owns its value, look and state.
+   */
+  inputProps?: Omit<
+    InputHTMLAttributes<HTMLInputElement>,
+    "value" | "onChange" | "disabled" | "placeholder" | "type"
+  >;
   className?: string;
 }
 
@@ -47,15 +68,22 @@ export function InkInput({
   type = "text",
   lead,
   trail,
+  onSubmit,
+  inputProps,
   className,
 }: InkInputProps) {
-  const id = useId();
+  const generated = useId();
+  const id = inputProps?.id ?? generated;
   const errorId = `${id}-error`;
   return (
-    <div className={cx("ink-input", invalid && "ink-input--invalid", className)}>
+    <div
+      className={cx("ink-input", invalid && "ink-input--invalid", className)}
+      data-disabled={disabled || undefined}
+    >
       <div className="ink-input__box">
-        {lead ? <span className="ink-input__lead">{lead}</span> : null}
+        {lead ? <span className="ink-input__lead">{renderIconSlot(lead, 20)}</span> : null}
         <input
+          {...inputProps}
           id={id}
           type={type}
           value={value}
@@ -63,10 +91,14 @@ export function InkInput({
           placeholder={placeholder}
           aria-label={label}
           aria-invalid={invalid ? true : undefined}
-          aria-describedby={invalid ? errorId : undefined}
+          aria-describedby={invalid ? errorId : inputProps?.["aria-describedby"]}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            inputProps?.onKeyDown?.(e);
+            if (e.key === "Enter" && onSubmit && !e.nativeEvent.isComposing) onSubmit();
+          }}
         />
-        {trail ? <span className="ink-input__trail">{trail}</span> : null}
+        {trail ? <span className="ink-input__trail">{renderIconSlot(trail, 20)}</span> : null}
       </div>
       {invalid ? (
         <p id={errorId} className="ink-input__error" role="alert">
@@ -91,7 +123,9 @@ export function InkTextArea({
   placeholder,
   rows = 3,
   maxRows = 12,
+  invalid,
   disabled,
+  inputProps,
   className,
 }: {
   value: string;
@@ -100,31 +134,55 @@ export function InkTextArea({
   placeholder?: string;
   rows?: number;
   maxRows?: number;
+  /** The message shown, and announced, when the value will not do. */
+  invalid?: string;
   disabled?: boolean;
+  inputProps?: Omit<
+    TextareaHTMLAttributes<HTMLTextAreaElement>,
+    "value" | "onChange" | "disabled" | "placeholder" | "rows"
+  >;
   className?: string;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const generated = useId();
+  const id = inputProps?.id ?? generated;
+  const errorId = `${id}-error`;
 
   function grow(node: HTMLTextAreaElement) {
     node.style.height = "auto";
     const line = parseFloat(getComputedStyle(node).lineHeight) || 20;
-    node.style.height = `${Math.min(node.scrollHeight, line * maxRows)}px`;
+    const chrome = node.offsetHeight - node.clientHeight;
+    const padding = parseFloat(getComputedStyle(node).paddingTop) * 2 || 0;
+    node.style.height = `${Math.min(node.scrollHeight, line * maxRows + padding) + chrome}px`;
   }
 
-  return (
+  const area = (
     <textarea
+      {...inputProps}
       ref={ref}
-      className={cx("ink-textarea", className)}
+      id={id}
+      className={cx("ink-textarea", !invalid && className)}
       value={value}
       rows={rows}
       disabled={disabled}
       placeholder={placeholder}
       aria-label={label}
+      aria-invalid={invalid ? true : undefined}
+      aria-describedby={invalid ? errorId : inputProps?.["aria-describedby"]}
       onChange={(e) => {
         onChange(e.target.value);
         grow(e.target);
       }}
     />
+  );
+  if (!invalid) return area;
+  return (
+    <div className={cx("ink-input", "ink-input--invalid", className)}>
+      {area}
+      <p id={errorId} className="ink-input__error" role="alert">
+        {invalid}
+      </p>
+    </div>
   );
 }
 
@@ -150,30 +208,42 @@ export function InkSelect<T extends string>({
   value,
   options,
   onChange,
+  placeholder,
   disabled,
   className,
 }: {
   label: string;
-  value: T;
+  value: T | undefined;
   options: InkSelectOption<T>[];
   onChange: (value: T) => void;
+  /** Shown while nothing is chosen. */
+  placeholder?: string;
   disabled?: boolean;
   className?: string;
 }) {
+  const empty = value === undefined || !options.some((o) => o.value === value);
   return (
-    <span className={cx("ink-select", className)}>
+    <span className={cx("ink-select", className)} data-empty={empty || undefined}>
       <select
         aria-label={label}
-        value={value}
+        value={empty ? "" : value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value as T)}
       >
+        {empty ? (
+          <option value="" disabled>
+            {placeholder ?? ""}
+          </option>
+        ) : null}
         {options.map((option) => (
           <option key={option.value} value={option.value} disabled={option.disabled}>
             {option.label}
           </option>
         ))}
       </select>
+      <span className="ink-select__mark" aria-hidden="true">
+        {renderIconSlot("chevron-down", 18)}
+      </span>
     </span>
   );
 }
@@ -192,28 +262,45 @@ export function InkCheckbox({
   label,
   indeterminate = false,
   disabled,
+  children,
   className,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  label: string;
+  /** What a screen reader hears. Defaults to `children` when that is a string. */
+  label?: string;
   indeterminate?: boolean;
   disabled?: boolean;
+  /** Shown beside the box, and part of what can be pressed. */
+  children?: ReactNode;
   className?: string;
 }) {
-  return (
+  const state = indeterminate ? "mixed" : checked ? "on" : "off";
+  const box = (
     <button
       type="button"
       role="checkbox"
       aria-checked={indeterminate ? "mixed" : checked}
-      aria-label={label}
+      aria-label={label ?? (typeof children === "string" ? children : undefined)}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cx("ink-checkbox", className)}
-      data-state={indeterminate ? "mixed" : checked ? "on" : "off"}
+      className={cx("ink-checkbox", !children && className)}
+      data-state={state}
     >
-      <span className="ink-checkbox__mark" aria-hidden="true" />
+      {state === "off" ? null : (
+        <span className="ink-checkbox__icon" aria-hidden="true">
+          {renderIconSlot(state === "mixed" ? "minus" : "check", 16)}
+        </span>
+      )}
     </button>
+  );
+  if (!children) return box;
+  // A label element forwards a click on the words to the box it wraps.
+  return (
+    <label className={cx("ink-labelled", className)} data-disabled={disabled || undefined}>
+      {box}
+      <span className="ink-labelled__text">{children}</span>
+    </label>
   );
 }
 
@@ -247,10 +334,13 @@ export function InkSlider({
   disabled?: boolean;
   className?: string;
 }) {
+  const ratio = max === min ? 0 : (Math.min(max, Math.max(min, value)) - min) / (max - min);
   return (
     <input
       type="range"
       className={cx("ink-slider", className)}
+      // The track paints its own fill up to the thumb; a range input has none.
+      style={{ "--ink-fill": ratio } as CSSProperties}
       value={value}
       min={min}
       max={max}
@@ -681,8 +771,10 @@ export function InkSearchField({
   className?: string;
 }) {
   return (
-    <div className={cx("ink-search", className)}>
-      <span className="ink-search__glass" aria-hidden="true" />
+    <div className={cx("ink-search", className)} data-disabled={disabled || undefined}>
+      <span className="ink-search__icon" aria-hidden="true">
+        {renderIconSlot("search", 18)}
+      </span>
       <input
         type="search"
         value={value}
@@ -705,7 +797,7 @@ export function InkSearchField({
           aria-label="Clear search"
           onClick={() => onChange("")}
         >
-          &times;
+          {renderIconSlot("x", 14)}
         </button>
       ) : null}
     </div>
@@ -760,7 +852,9 @@ export function InkAutocomplete<T>({
   return (
     <div className={cx("ink-autocomplete", className)}>
       <div className="ink-search">
-        <span className="ink-search__glass" aria-hidden="true" />
+        <span className="ink-search__icon" aria-hidden="true">
+          {renderIconSlot("search", 18)}
+        </span>
         <input
           type="text"
           role="combobox"
@@ -817,9 +911,13 @@ export function InkAutocomplete<T>({
                 }}
                 onMouseEnter={() => setActive(i)}
               >
-                {highlight(labelOf(match.item), match.ranges).map((part, j) =>
-                  part.match ? <mark key={j}>{part.text}</mark> : <span key={j}>{part.text}</span>,
-                )}
+                {/* One text run, so the space before a mid-word match survives:
+                    as separate flex items, each part's edge whitespace collapsed. */}
+                <span className="ink-autocomplete__text">
+                  {highlight(labelOf(match.item), match.ranges).map((part, j) =>
+                    part.match ? <mark key={j}>{part.text}</mark> : <span key={j}>{part.text}</span>,
+                  )}
+                </span>
               </li>
             ))
           )}
@@ -873,7 +971,7 @@ export function InkNumberField({
         disabled={disabled || value <= min}
         onClick={() => onChange(clamp(round(value - step)))}
       >
-        &minus;
+        {renderIconSlot("minus", 18)}
       </button>
       <input
         type="text"
@@ -898,7 +996,7 @@ export function InkNumberField({
         disabled={disabled || value >= max}
         onClick={() => onChange(clamp(round(value + step)))}
       >
-        +
+        {renderIconSlot("plus", 18)}
       </button>
     </div>
   );

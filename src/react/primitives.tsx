@@ -86,23 +86,28 @@ export function InkBadge({ tone = "neutral", icon, className, children }: InkBad
 export interface InkNoticeProps {
   tone?: InkTone;
   icon?: InkIconSlot;
+  /** Anything that acts on the notice — a retry, a link. Sits under the words. */
+  action?: ReactNode;
   className?: string;
   children: ReactNode;
 }
 
-export function InkNotice({ tone = "neutral", icon, className, children }: InkNoticeProps) {
+export function InkNotice({ tone = "neutral", icon, action, className, children }: InkNoticeProps) {
   const { color } = useInkTheme();
   const assertive = tone === "danger";
   return (
-    <p
+    <div
       className={cx("ink-notice", className)}
       style={toneVars(tone, color)}
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
     >
-      {renderIconSlot(icon)}
-      {children}
-    </p>
+      {renderIconSlot(icon, 18)}
+      <div className="ink-notice__body">
+        <p className="ink-notice__text">{children}</p>
+        {action ? <div className="ink-notice__action">{action}</div> : null}
+      </div>
+    </div>
   );
 }
 
@@ -229,7 +234,7 @@ export function InkChip({
           disabled={disabled}
           onClick={onRemove}
         >
-          &times;
+          {renderIconSlot("x", 14)}
         </button>
       ) : null}
     </span>
@@ -251,6 +256,7 @@ export function InkText({
   tone,
   mono,
   numeric,
+  numberOfLines,
   className,
   children,
 }: {
@@ -261,6 +267,8 @@ export function InkText({
   mono?: boolean;
   /** Tabular figures, for anything a reader compares down a column. */
   numeric?: boolean;
+  /** Truncate with an ellipsis after this many lines. */
+  numberOfLines?: number;
   className?: string;
   children: ReactNode;
 }) {
@@ -272,6 +280,8 @@ export function InkText({
       data-tone={tone}
       data-mono={mono || undefined}
       data-numeric={numeric || undefined}
+      data-clamp={numberOfLines ? true : undefined}
+      style={numberOfLines ? ({ "--ink-lines": numberOfLines } as CSSProperties) : undefined}
     >
       {children}
     </Tag>

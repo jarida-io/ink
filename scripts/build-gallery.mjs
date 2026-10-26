@@ -28,6 +28,31 @@ const block = (vars) =>
     .map(([k, v]) => `  ${k}: ${v};`)
     .join("\n");
 
+// ── Icons ──────────────────────────────────────────────────────────────────
+//
+// The gallery draws icons the same way the library does: from node data, on a
+// 24 grid, with the stroke compensated so every size carries the same weight.
+// `lucide-static` is a devDependency and pure data — no renderer, no React —
+// which is exactly the form the library consumes, so what is on this page is
+// what a consumer gets rather than a hand-tuned imitation.
+const ICON_NODES = JSON.parse(
+  readFileSync(resolve(ROOT, "node_modules/lucide-static/icon-nodes.json"), "utf8"),
+);
+
+function icon(name, size = 20) {
+  const node = ICON_NODES[name];
+  if (!node) throw new Error(`gallery: no icon named "${name}"`);
+  const body = node
+    .map(([tag, attrs]) => {
+      const a = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(" ");
+      return `<${tag} ${a} />`;
+    })
+    .join("");
+  // The same compensation `iconStrokeWidth` performs: desired * 24 / rendered.
+  const stroke = ((2 * 24) / size).toFixed(3);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="var(--ink-tone-fg, currentColor)" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
+}
+
 // ── The calendar, rendered from the real grid ──────────────────────────────
 const DAY2 = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const weeks = monthGrid(2026, 1, {
@@ -38,9 +63,9 @@ const weeks = monthGrid(2026, 1, {
 const calendar = `
 <div class="ink-calendar">
   <div class="ink-calendar__head">
-    <button class="ink-calendar__page" aria-label="Previous month"><span class="ink-calendar__chev" data-dir="prev"></span></button>
+    <button class="ink-calendar__page" aria-label="Previous month">${icon("chevron-left")}</button>
     <span class="ink-calendar__month">January 2026</span>
-    <button class="ink-calendar__page" aria-label="Next month"><span class="ink-calendar__chev" data-dir="next"></span></button>
+    <button class="ink-calendar__page" aria-label="Next month">${icon("chevron-right")}</button>
   </div>
   <div class="ink-calendar__grid" role="grid" aria-label="January 2026">
     <div class="ink-calendar__row" role="row">${weekdayOrder(1)
@@ -68,31 +93,6 @@ const calendar = `
 
 // Counted from the built entry point rather than typed, so it cannot go stale
 // the way "16 components" did on the first version of this page.
-
-// ── Icons ──────────────────────────────────────────────────────────────────
-//
-// The gallery draws icons the same way the library does: from node data, on a
-// 24 grid, with the stroke compensated so every size carries the same weight.
-// `lucide-static` is a devDependency and pure data — no renderer, no React —
-// which is exactly the form the library consumes, so what is on this page is
-// what a consumer gets rather than a hand-tuned imitation.
-const ICON_NODES = JSON.parse(
-  readFileSync(resolve(ROOT, "node_modules/lucide-static/icon-nodes.json"), "utf8"),
-);
-
-function icon(name, size = 20) {
-  const node = ICON_NODES[name];
-  if (!node) throw new Error(`gallery: no icon named "${name}"`);
-  const body = node
-    .map(([tag, attrs]) => {
-      const a = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(" ");
-      return `<${tag} ${a} />`;
-    })
-    .join("");
-  // The same compensation `iconStrokeWidth` performs: desired * 24 / rendered.
-  const stroke = ((2 * 24) / size).toFixed(3);
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="var(--ink-tone-fg, currentColor)" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
-}
 
 const { HOUSE_ICONS } = await import(resolve(ROOT, "dist/core/house-icons.js"));
 const HOUSE_NAMES = Object.keys(HOUSE_ICONS);
@@ -373,9 +373,9 @@ code {
             <div class="ink-sidebar__body">
               <div class="ink-sidebar__section">
                 <span class="ink-eyebrow ink-sidebar__sectionLabel">Library</span>
-                <button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>
-                <button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>
-                <button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Shared</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">${icon("layers")}</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">${icon("clock")}</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">${icon("users")}</span><span class="ink-nav__label">Shared</span><span class="ink-nav__mark"></span></button>
               </div>
             </div>
             <div class="ink-sidebar__foot"><span class="ink-eyebrow">v1.0</span></div>
@@ -395,12 +395,12 @@ code {
 
             <nav class="ink-glass ink-glass--raised ink-bottombar ink-bottombar--floating" aria-label="Sections" id="bot" data-stage="condensed" data-material="true" style="position:static;margin:0">
               <div class="ink-bottombar__body" id="botBody">
-                <button class="ink-nav__item" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Home</span><span class="ink-nav__mark"></span></button>
-                <button class="ink-nav__item"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Inbox</span><span class="ink-nav__badge">12</span><span class="ink-nav__mark"></span></button>
-                <button class="ink-nav__item"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Search</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item" aria-current="page"><span class="ink-nav__icon">${icon("house")}</span><span class="ink-nav__label">Home</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item"><span class="ink-nav__icon">${icon("inbox")}</span><span class="ink-nav__label">Inbox</span><span class="ink-nav__badge">12</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item"><span class="ink-nav__icon">${icon("search")}</span><span class="ink-nav__label">Search</span><span class="ink-nav__mark"></span></button>
                 <button class="ink-nav__item"><span class="ink-nav__icon"><span class="ink-nav__more"></span></span><span class="ink-nav__label">More</span><span class="ink-nav__mark"></span></button>
               </div>
-              <button class="ink-bottombar__puck" id="botPuck" tabindex="-1" aria-label="Show navigation">◆</button>
+              <button class="ink-bottombar__puck" id="botPuck" tabindex="-1" aria-label="Show navigation">${icon("house")}</button>
             </nav>
           </div>
         </div>
@@ -630,12 +630,26 @@ code {
           <button class="ink-btn ink-btn--quiet">Cancel</button>
           <button class="ink-btn ink-btn--danger">Delete</button>
         </div>
+        <div class="rowc">
+          <button class="ink-btn ink-btn--primary ink-btn--sm ink-reach">${icon("plus", 16)}Small</button>
+          <button class="ink-btn ink-btn--quiet ink-btn--sm ink-reach">${icon("pencil", 16)}Small</button>
+          <button class="ink-btn ink-btn--primary">${icon("refresh-cw")}Medium</button>
+          <button class="ink-btn ink-btn--primary ink-btn--lg">${icon("download", 24)}Large</button>
+        </div>
+        <div class="rowc">
+          <button class="ink-btn ink-btn--primary" disabled aria-busy="true" data-loading><span class="ink-spinner" aria-hidden="true" style="width:18px;height:18px"></span>Saving</button>
+          <button class="ink-btn ink-btn--quiet" disabled aria-busy="true" data-loading><span class="ink-spinner" aria-hidden="true" style="width:18px;height:18px"></span>Checking</button>
+          <button class="ink-btn ink-btn--danger">${icon("trash-2")}Remove</button>
+          <button class="ink-btn ink-btn--primary" disabled>Disabled</button>
+          <button class="ink-btn ink-btn--quiet" disabled>Disabled</button>
+        </div>
       </div>
       <div class="note">
         <span class="ink-eyebrow">InkChoice &middot; InkSegmented &middot; InkButton &middot; InkSwitch</span>
         <p>Arrow keys move inside each group. Selection follows focus, and the group is one tab stop.</p>
         <p>No selected-colour, no tint, no check mark doing the edge&rsquo;s job. Colour is the page&rsquo;s scarcest material and spending it on <em>this one</em> leaves nothing for the control that is asking a question.</p>
         <p>A screen gets about one <code>primary</code>. <code>danger</code> is a primary that happens to be destructive, not a third emphasis level.</p>
+        <p>Every variant&rsquo;s face is the control height, so a quiet Cancel lines up with a primary Save. <code>loading</code> keeps the words &mdash; a button that swaps its label for a spinner has stopped saying what it is doing.</p>
       </div>
     </div>
 
@@ -646,28 +660,31 @@ code {
             <button class="ink-radio" role="radio" aria-checked="true" tabindex="0"><span class="ink-radio__dot"></span><span class="ink-radio__text"><span class="ink-radio__label">Balanced</span><span class="ink-radio__desc">154 MB. Sounds good and downloads quickly.</span></span></button>
             <button class="ink-radio" role="radio" aria-checked="false" tabindex="-1"><span class="ink-radio__dot"></span><span class="ink-radio__text"><span class="ink-radio__label">Best</span><span class="ink-radio__desc">326 MB. Noticeably better on a good speaker.</span></span></button>
           </div>
-          <div class="rowc">
-            <button class="ink-checkbox" data-state="on" role="checkbox" aria-checked="true" aria-label="All rooms"><span class="ink-checkbox__mark"></span></button>
-            <button class="ink-checkbox" data-state="mixed" role="checkbox" aria-checked="mixed" aria-label="Some rooms"><span class="ink-checkbox__mark"></span></button>
-            <button class="ink-checkbox" data-state="off" role="checkbox" aria-checked="false" aria-label="No rooms"><span class="ink-checkbox__mark"></span></button>
-            <span class="ink-eyebrow">on &middot; mixed &middot; off</span>
+          <div class="col" style="gap:var(--space-1)">
+            <label class="ink-labelled"><button class="ink-checkbox" data-state="on" role="checkbox" aria-checked="true" aria-label="Kitchen speaker"><span class="ink-checkbox__icon">${icon("check", 16)}</span></button><span class="ink-labelled__text">Kitchen speaker</span></label>
+            <label class="ink-labelled"><button class="ink-checkbox" data-state="mixed" role="checkbox" aria-checked="mixed" aria-label="Some rooms"><span class="ink-checkbox__icon">${icon("minus", 16)}</span></button><span class="ink-labelled__text">Some rooms</span></label>
+            <label class="ink-labelled"><button class="ink-checkbox" data-state="off" role="checkbox" aria-checked="false" aria-label="Garage"></button><span class="ink-labelled__text">Garage</span></label>
+            <label class="ink-labelled"><button class="ink-switch" role="switch" aria-checked="true" aria-label="Speak aloud"><span class="ink-switch__knob"></span></button><span class="ink-labelled__text">Speak aloud</span></label>
+            <label class="ink-labelled" data-disabled><button class="ink-switch" role="switch" aria-checked="false" aria-label="Keep forever" disabled><span class="ink-switch__knob"></span></button><span class="ink-labelled__text">Keep forever</span></label>
           </div>
         </div>
         <div class="col" style="min-width:280px;flex:1">
           <span class="ink-eyebrow">Pace</span>
-          <input class="ink-slider" type="range" min="50" max="200" value="120" aria-label="Pace">
+          <input class="ink-slider" type="range" min="50" max="200" value="120" aria-label="Pace" style="--ink-fill: 0.4667">
           <span class="ink-eyebrow">Price</span>
           <div class="ink-range">
             <div class="ink-range__track"><span class="ink-range__fill" style="left:20%;right:28%"></span></div>
             <input class="ink-range__input" type="range" min="0" max="100" value="20" aria-label="Price, lower bound">
             <input class="ink-range__input" type="range" min="0" max="100" value="72" aria-label="Price, upper bound">
           </div>
+          <span class="ink-eyebrow">Room</span>
+          <span class="ink-select" data-empty><select aria-label="Room"><option value="" disabled selected>Pick a room</option><option>Kitchen</option><option>Living room</option></select><span class="ink-select__mark" aria-hidden="true">${icon("chevron-down", 18)}</span></span>
           <div class="ink-menu" id="menu">
-            <button class="ink-btn ink-btn--quiet" id="menuTrigger" aria-haspopup="menu" aria-expanded="false" style="min-height:var(--ctl-h-sm);padding:0 var(--ctl-px-sm)">Actions</button>
+            <button class="ink-btn ink-btn--quiet ink-btn--sm ink-reach" id="menuTrigger" aria-haspopup="menu" aria-expanded="false">${icon("ellipsis", 16)}Actions</button>
             <div class="ink-menu__list" role="menu" aria-label="Actions" data-align="start" id="menuList" hidden>
-              <button class="ink-menu__item" role="menuitem">Rename</button>
-              <button class="ink-menu__item" role="menuitem">Duplicate</button>
-              <button class="ink-menu__item" role="menuitem" data-tone="danger" data-separated>Delete</button>
+              <button class="ink-menu__item" role="menuitem">${icon("pencil")}Rename</button>
+              <button class="ink-menu__item" role="menuitem">${icon("copy")}Duplicate</button>
+              <button class="ink-menu__item" role="menuitem" data-tone="danger" data-separated>${icon("trash-2")}Delete</button>
             </div>
           </div>
         </div>
@@ -698,7 +715,7 @@ code {
           <span class="ink-eyebrow">Range</span>
           <div class="ink-picker"><button class="ink-picker__field"><span class="ink-picker__value">20/1/2026 &ndash; 24/1/2026</span><span class="ink-picker__mark"></span></button></div>
           <span class="ink-eyebrow">Time</span>
-          <span class="ink-select"><select aria-label="At"><option>09:00</option><option>09:15</option><option>09:30</option></select></span>
+          <span class="ink-select"><select aria-label="At"><option>09:00</option><option>09:15</option><option>09:30</option></select><span class="ink-select__mark" aria-hidden="true">${icon("chevron-down", 18)}</span></span>
         </div>
       </div>
       <div class="note">
@@ -751,8 +768,9 @@ code {
           <span class="ink-avatar" role="img" aria-label="Jerry Ochieng">JO</span>
           <span class="ink-skeleton" style="width:120px"></span>
         </div>
-        <p class="ink-notice" role="status" style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)">Bella is ready. The engine reloaded and is running q4f16.</p>
-        <p class="ink-notice" role="alert" style="--ink-tone-fg: var(--color-destructive-fg); --ink-tone-soft: var(--color-destructive-soft)">The export could not finish: the destination folder is read-only, so nothing was written.</p>
+        <div class="ink-notice" role="status" style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)">${icon("check", 18)}<div class="ink-notice__body"><p class="ink-notice__text">Bella is ready. The engine reloaded and is running q4f16.</p></div></div>
+        <div class="ink-notice" role="alert" style="--ink-tone-fg: var(--color-destructive-fg); --ink-tone-soft: var(--color-destructive-soft)">${icon("triangle-alert", 18)}<div class="ink-notice__body"><p class="ink-notice__text">The export could not finish: the destination folder is read-only, so nothing was written.</p><div class="ink-notice__action"><button class="ink-btn ink-btn--quiet ink-btn--sm ink-reach">Try again</button></div></div></div>
+        <div class="ink-notice" role="status"><div class="ink-notice__body"><p class="ink-notice__text">A neutral notice, with no icon.</p></div></div>
         <div class="rowc">
           <span class="ink-badge" style="--ink-tone-fg: var(--color-text-secondary); --ink-tone-soft: var(--color-neutral-soft)">neutral</span>
           <span class="ink-badge" style="--ink-tone-fg: var(--border-ink); --ink-tone-soft: var(--bg-brand-soft)">brand</span>
@@ -762,10 +780,10 @@ code {
           <span class="ink-badge" style="--ink-tone-fg: var(--color-info-fg); --ink-tone-soft: var(--color-info-soft)">info</span>
         </div>
         <div class="ink-empty">
-          <span class="ink-empty__icon">◇</span>
+          <span class="ink-empty__icon">${icon("brain", 32)}</span>
           <p class="ink-empty__title">Nothing kept yet</p>
           <p class="ink-prose">Tell it something worth keeping, or connect a calendar under Sources.</p>
-          <button class="ink-btn ink-btn--primary" style="min-height:var(--ctl-h-sm);padding:0 var(--ctl-px-sm)">Remember something</button>
+          <button class="ink-btn ink-btn--primary">Remember something</button>
         </div>
       </div>
       <div class="note">
@@ -841,6 +859,19 @@ code {
             <p class="ink-prose">Twenty-two turns will go with it. This cannot be undone.</p>
             <div class="ink-dialog__actions"><button class="ink-btn ink-btn--quiet">Keep it</button><button class="ink-btn ink-btn--danger">Delete</button></div>
           </div>
+          <div class="ink-sheet--bottom" style="position:relative">
+            <div class="ink-sheet__panel" style="max-height:none;border-bottom:var(--ink-border-width) solid var(--color-text);border-radius:var(--radius-2xl)">
+              <div class="ink-sheet__head">
+                <span class="ink-eyebrow">Sheet</span>
+                <h3 class="ink-sheet__title">Speaking</h3>
+                <p class="ink-sheet__description">How Goose sounds in this room.</p>
+              </div>
+              <div class="ink-sheet__body">
+                <label class="ink-labelled"><button class="ink-switch" role="switch" aria-checked="true" aria-label="Speak aloud"><span class="ink-switch__knob"></span></button><span class="ink-labelled__text">Speak aloud</span></label>
+                <button class="ink-btn ink-btn--primary ink-btn--block">Done</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="note">
@@ -877,8 +908,8 @@ code {
             <div class="ink-sidebar__body">
               <div class="ink-sidebar__section">
                 <span class="ink-eyebrow ink-sidebar__sectionLabel">Library</span>
-                <button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>
-                <button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">${icon("layers")}</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>
+                <button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">${icon("clock")}</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>
               </div>
             </div>
           </nav>
@@ -905,23 +936,21 @@ code {
         <div class="rowc">
           <span class="ink-chip" data-selected><span class="ink-chip__press"><span class="ink-chip__label">American</span></span></span>
           <span class="ink-chip"><button class="ink-chip__press" type="button"><span class="ink-chip__label">British</span></button></span>
-          <span class="ink-chip ink-chip--removable"><span class="ink-chip__press"><span class="ink-chip__label">ada@example.com</span></span><button class="ink-chip__remove" type="button" aria-label="Remove ada@example.com">&times;</button></span>
-          <span class="ink-chip ink-chip--removable" data-selected style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)"><span class="ink-chip__press"><span class="ink-chip__label">Grade A</span></span><button class="ink-chip__remove" type="button" aria-label="Remove Grade A">&times;</button></span>
+          <span class="ink-chip ink-chip--removable"><span class="ink-chip__press"><span class="ink-chip__label">ada@example.com</span></span><button class="ink-chip__remove" type="button" aria-label="Remove ada@example.com">${icon("x", 14)}</button></span>
+          <span class="ink-chip ink-chip--removable" data-selected style="--ink-tone-fg: var(--color-success-fg); --ink-tone-soft: var(--color-success-soft)"><span class="ink-chip__press"><span class="ink-chip__label">Grade A</span></span><button class="ink-chip__remove" type="button" aria-label="Remove Grade A">${icon("x", 14)}</button></span>
         </div>
 
-        <div class="iconPanel">
-          <div class="ink-search" style="max-width:340px">
-            <span class="ink-search__glass" aria-hidden="true"></span>
-            <input type="search" placeholder="Search what it remembers" aria-label="Search" value="se" id="searchDemo">
-            <button class="ink-search__clear" type="button" aria-label="Clear search">&times;</button>
-          </div>
+        <div class="ink-search" style="max-width:340px">
+          <span class="ink-search__icon" aria-hidden="true">${icon("search", 18)}</span>
+          <input type="search" placeholder="Search what it remembers" aria-label="Search" value="se" id="searchDemo">
+          <button class="ink-search__clear" type="button" aria-label="Clear search">${icon("x", 14)}</button>
         </div>
 
         <div class="ink-edge ink-group" style="max-width:420px">
           <header class="ink-group__head"><h2 class="ink-group__title">People</h2></header>
           <div class="ink-list" role="list" aria-label="People">
-            <button class="ink-listitem ink-listitem--pressable" role="listitem" data-selected><span class="ink-listitem__lead"><span class="ink-avatar" role="img" aria-label="Ada Lovelace">AL</span></span><span class="ink-listitem__text"><span class="ink-listitem__title">Ada Lovelace</span><span class="ink-listitem__desc">Last seen this morning</span></span><span class="ink-listitem__trail">&rsaquo;</span></button>
-            <button class="ink-listitem ink-listitem--pressable" role="listitem"><span class="ink-listitem__lead"><span class="ink-avatar" role="img" aria-label="Grace Hopper">GH</span></span><span class="ink-listitem__text"><span class="ink-listitem__title">Grace Hopper</span><span class="ink-listitem__desc">Last seen on Tuesday</span></span><span class="ink-listitem__trail">&rsaquo;</span></button>
+            <button class="ink-listitem ink-listitem--pressable" role="listitem" data-selected><span class="ink-listitem__lead"><span class="ink-avatar" role="img" aria-label="Ada Lovelace">AL</span></span><span class="ink-listitem__text"><span class="ink-listitem__title">Ada Lovelace</span><span class="ink-listitem__desc">Last seen this morning</span></span><span class="ink-listitem__trail">${icon("chevron-right", 18)}</span></button>
+            <button class="ink-listitem ink-listitem--pressable" role="listitem"><span class="ink-listitem__lead"><span class="ink-avatar" role="img" aria-label="Grace Hopper">GH</span></span><span class="ink-listitem__text"><span class="ink-listitem__title">Grace Hopper</span><span class="ink-listitem__desc">Last seen on Tuesday</span></span><span class="ink-listitem__trail">${icon("chevron-right", 18)}</span></button>
           </div>
         </div>
 
@@ -942,18 +971,21 @@ code {
         </div>
 
         <span class="ink-eyebrow">Autocomplete, shown open</span>
-          <div class="ink-autocomplete" style="max-width:340px;height:270px">
-            <div class="ink-search">
-              <span class="ink-search__glass" aria-hidden="true"></span>
-              <input type="text" role="combobox" aria-expanded="true" aria-label="Go to" value="se" readonly>
-            </div>
-            <ul class="ink-autocomplete__list" role="listbox" aria-label="Go to">
-              <li class="ink-autocomplete__option" role="option" aria-selected="true"><mark>Se</mark><span>ttings</span></li>
-              <li class="ink-autocomplete__option" role="option" aria-selected="false"><mark>Se</mark><span>ssions</span></li>
-              <li class="ink-autocomplete__option" role="option" aria-selected="false"><span>Voice </span><mark>se</mark><span>nsitivity</span></li>
-            </ul>
+        <!-- The list hangs below its input; the space it needs is reserved
+             around the control rather than on it, or it hangs below that. -->
+        <div style="min-height:210px">
+        <div class="ink-autocomplete" style="max-width:340px">
+          <div class="ink-search">
+            <span class="ink-search__icon" aria-hidden="true">${icon("search", 18)}</span>
+            <input type="text" role="combobox" aria-expanded="true" aria-label="Go to" value="se" readonly>
           </div>
-      </div>
+          <ul class="ink-autocomplete__list" role="listbox" aria-label="Go to">
+            <li class="ink-autocomplete__option" role="option" aria-selected="true"><span class="ink-autocomplete__text"><mark>Se</mark><span>ttings</span></span></li>
+            <li class="ink-autocomplete__option" role="option" aria-selected="false"><span class="ink-autocomplete__text"><mark>Se</mark><span>ssions</span></span></li>
+            <li class="ink-autocomplete__option" role="option" aria-selected="false"><span class="ink-autocomplete__text"><span>Voice </span><mark>se</mark><span>nsitivity</span></span></li>
+          </ul>
+        </div>
+        </div>
       </div>
       <div class="note">
         <span class="ink-eyebrow">InkChip &middot; InkSearchField &middot; InkAutocomplete &middot; InkList &middot; InkListItem &middot; InkAvatarGroup &middot; InkTooltip &middot; InkLink</span>
@@ -974,9 +1006,9 @@ code {
         <div class="iconPanel">
           <span class="ink-eyebrow">Number field</span>
           <div class="ink-number">
-            <button class="ink-number__step" type="button" aria-label="Decrease quantity">&minus;</button>
+            <button class="ink-number__step" type="button" aria-label="Decrease quantity">${icon("minus", 18)}</button>
             <input type="text" inputmode="decimal" value="12" aria-label="Quantity">
-            <button class="ink-number__step" type="button" aria-label="Increase quantity">+</button>
+            <button class="ink-number__step" type="button" aria-label="Increase quantity">${icon("plus", 18)}</button>
           </div>
           <span class="ink-eyebrow">Rating</span>
           <div class="ink-rating" role="radiogroup" aria-label="Rating" id="rating">
@@ -998,11 +1030,11 @@ code {
           <span class="ink-eyebrow">Accordion</span>
           <div class="ink-accordion" role="group" aria-label="Questions">
             <details class="ink-accordion__item" open>
-              <summary class="ink-accordion__head"><span class="ink-accordion__title">Where does the edge come from?</span><span class="ink-accordion__chev"></span></summary>
+              <summary class="ink-accordion__head"><span class="ink-accordion__title">Where does the edge come from?</span><span class="ink-accordion__mark" aria-hidden="true">${icon("chevron-down", 18)}</span></summary>
               <div class="ink-accordion__body">A 2px border printed 4px above a hard plate. Built on the platform <code>&lt;details&gt;</code>, so find-in-page reaches inside a closed panel.</div>
             </details>
             <details class="ink-accordion__item">
-              <summary class="ink-accordion__head"><span class="ink-accordion__title">Why no icon set?</span><span class="ink-accordion__meta">optional</span><span class="ink-accordion__chev"></span></summary>
+              <summary class="ink-accordion__head"><span class="ink-accordion__title">Why no icon set?</span><span class="ink-accordion__meta">optional</span><span class="ink-accordion__mark" aria-hidden="true">${icon("chevron-down", 18)}</span></summary>
               <div class="ink-accordion__body">lucide-react and lucide-react-native already agree. Every mark this library needs, it draws.</div>
             </details>
           </div>
@@ -1030,14 +1062,14 @@ code {
     <div class="spec">
       <div class="demo">
         <ol class="ink-stepper ink-stepper--horizontal" aria-label="Setup">
-          <li class="ink-stepper__step" data-state="done"><button class="ink-stepper__body" type="button"><span class="ink-stepper__marker"><span class="ink-stepper__tick"></span></span><span class="ink-stepper__text"><span class="ink-stepper__label">Account</span></span></button></li>
-          <li class="ink-stepper__step" data-state="done"><button class="ink-stepper__body" type="button"><span class="ink-stepper__marker"><span class="ink-stepper__tick"></span></span><span class="ink-stepper__text"><span class="ink-stepper__label">Voice</span></span></button></li>
+          <li class="ink-stepper__step" data-state="done"><button class="ink-stepper__body" type="button"><span class="ink-stepper__marker">${icon("check", 16)}</span><span class="ink-stepper__text"><span class="ink-stepper__label">Account</span></span></button></li>
+          <li class="ink-stepper__step" data-state="done"><button class="ink-stepper__body" type="button"><span class="ink-stepper__marker">${icon("check", 16)}</span><span class="ink-stepper__text"><span class="ink-stepper__label">Voice</span></span></button></li>
           <li class="ink-stepper__step" data-state="current"><div class="ink-stepper__body" aria-current="step"><span class="ink-stepper__marker">3</span><span class="ink-stepper__text"><span class="ink-stepper__label">Rooms</span><span class="ink-stepper__desc">Where things are</span></span></div></li>
           <li class="ink-stepper__step" data-state="todo"><div class="ink-stepper__body"><span class="ink-stepper__marker">4</span><span class="ink-stepper__text"><span class="ink-stepper__label">Finish</span></span></div></li>
         </ol>
 
         <nav class="ink-pagination" aria-label="Pagination" id="pager">
-          <button class="ink-pagination__step" type="button" aria-label="Previous page"><span class="ink-calendar__chev" data-dir="prev"></span></button>
+          <button class="ink-pagination__step" type="button" aria-label="Previous page">${icon("chevron-left")}</button>
           <button class="ink-pagination__page" type="button" aria-label="Page 1">1</button>
           <span class="ink-pagination__gap">&hellip;</span>
           <button class="ink-pagination__page" type="button" aria-label="Page 11">11</button>
@@ -1045,18 +1077,18 @@ code {
           <button class="ink-pagination__page" type="button" aria-label="Page 13">13</button>
           <span class="ink-pagination__gap">&hellip;</span>
           <button class="ink-pagination__page" type="button" aria-label="Page 40">40</button>
-          <button class="ink-pagination__step" type="button" aria-label="Next page"><span class="ink-calendar__chev" data-dir="next"></span></button>
+          <button class="ink-pagination__step" type="button" aria-label="Next page">${icon("chevron-right")}</button>
         </nav>
 
         <div class="rowc" style="gap:var(--space-8)">
-          <button class="ink-fab" type="button" data-position="static" aria-label="New conversation"><span class="ink-fab__plus"></span></button>
-          <button class="ink-fab ink-fab--extended" type="button" data-position="static"><span class="ink-fab__plus"></span><span class="ink-fab__label">New conversation</span></button>
+          <button class="ink-fab" type="button" data-position="static" aria-label="New conversation">${icon("plus", 24)}</button>
+          <button class="ink-fab ink-fab--extended" type="button" data-position="static">${icon("plus", 24)}<span class="ink-fab__label">New conversation</span></button>
           <div class="ink-speeddial" data-position="static" data-open id="dial">
             <div class="ink-speeddial__actions" role="menu" aria-label="Create">
-              <button class="ink-speeddial__action" type="button" role="menuitem"><span class="ink-speeddial__actionLabel">Note</span><span class="ink-speeddial__actionIcon">◇</span></button>
-              <button class="ink-speeddial__action" type="button" role="menuitem"><span class="ink-speeddial__actionLabel">Routine</span><span class="ink-speeddial__actionIcon">◆</span></button>
+              <button class="ink-speeddial__action" type="button" role="menuitem"><span class="ink-speeddial__actionLabel">Note</span><span class="ink-speeddial__actionIcon">${icon("file-text")}</span></button>
+              <button class="ink-speeddial__action" type="button" role="menuitem"><span class="ink-speeddial__actionLabel">Routine</span><span class="ink-speeddial__actionIcon">${icon("repeat")}</span></button>
             </div>
-            <button class="ink-fab" type="button" aria-label="Create" aria-expanded="true"><span class="ink-fab__plus"></span></button>
+            <button class="ink-fab" type="button" aria-label="Create" aria-expanded="true"><span class="ink-speeddial__mark" aria-hidden="true">${icon("plus", 24)}</span></button>
           </div>
         </div>
       </div>
@@ -1207,8 +1239,8 @@ document.querySelectorAll('[role="switch"]').forEach(function (s) {
     '<button class="ink-drawer__scrim" type="button" aria-label="Close navigation"></button>' +
     '<aside class="ink-glass ink-glass--raised ink-drawer__panel" aria-label="Navigation">' +
     '<span class="ink-eyebrow">Navigation</span>' +
-    '<button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">◆</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>' +
-    '<button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">◇</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>' +
+    '<button class="ink-nav__item ink-nav__item--row" aria-current="page"><span class="ink-nav__icon">${icon("layers")}</span><span class="ink-nav__label">Everything</span><span class="ink-nav__mark"></span></button>' +
+    '<button class="ink-nav__item ink-nav__item--row"><span class="ink-nav__icon">${icon("clock")}</span><span class="ink-nav__label">Recent</span><span class="ink-nav__badge">3</span><span class="ink-nav__mark"></span></button>' +
     "</aside>";
   document.body.appendChild(drawer);
   function close() { delete drawer.dataset.open; drawer.setAttribute("aria-hidden", "true"); }

@@ -436,7 +436,7 @@ export function InkPagination({
         disabled={page <= 1}
         onClick={() => onChange(page - 1)}
       >
-        <span className="ink-calendar__chev" data-dir="prev" aria-hidden="true" />
+        {renderIconSlot("chevron-left", 20)}
       </button>
 
       {slots.map((slot, i) =>
@@ -465,7 +465,7 @@ export function InkPagination({
         disabled={page >= count}
         onClick={() => onChange(page + 1)}
       >
-        <span className="ink-calendar__chev" data-dir="next" aria-hidden="true" />
+        {renderIconSlot("chevron-right", 20)}
       </button>
     </nav>
   );
@@ -521,7 +521,7 @@ export function InkStepper({
               aria-current={state === "current" ? "step" : undefined}
             >
               <span className="ink-stepper__marker" aria-hidden="true">
-                {state === "done" ? <span className="ink-stepper__tick" /> : i + 1}
+                {state === "done" ? renderIconSlot("check", 16) : i + 1}
               </span>
               <span className="ink-stepper__text">
                 <span className="ink-stepper__label">{step.label}</span>
@@ -572,7 +572,7 @@ export function InkFab({
       disabled={disabled}
       onClick={onPress}
     >
-      {renderIconSlot(icon, 24) ?? <span className="ink-fab__plus" aria-hidden="true" />}
+      {renderIconSlot(icon ?? "plus", 24)}
       {extended ? <span className="ink-fab__label">{label}</span> : null}
     </button>
   );
@@ -641,7 +641,11 @@ export function InkSpeedDial({
         aria-haspopup="menu"
         onClick={() => setOpen((o) => !o)}
       >
-        {renderIconSlot(icon, 24) ?? <span className="ink-fab__plus" aria-hidden="true" />}
+        {/* Only the mark turns. Turning the whole button would spin its plate,
+            and the plate is the one thing that never moves. */}
+        <span className="ink-speeddial__mark" aria-hidden="true">
+          {renderIconSlot(icon ?? "plus", 24)}
+        </span>
       </button>
     </div>
   );

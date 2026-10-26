@@ -66,7 +66,7 @@
 .ink-pressable--compact:hover:not(:disabled) { --ink-lift: var(--ink-rest); }
 .ink-pressable--compact:active:not(:disabled) { --ink-lift: var(--ink-press-compact); }
 
-.ink-pressable:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-pressable:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 
 .ink-edge:focus-visible,
 .ink-pressable:focus-visible {
@@ -247,7 +247,7 @@
 .ink-choice[aria-pressed="true"]:active:not(:disabled),
 .ink-choice[aria-checked="true"]:active:not(:disabled) { --ink-lift: var(--ink-press-compact); }
 
-.ink-choice:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-choice:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-choice:focus-visible { outline: 2px solid var(--border-ink); outline-offset: 3px; }
 
 .ink-choice__name {
@@ -279,14 +279,21 @@
 
 .ink-btn {
   --ink-lift: var(--ink-rest);
+  --ink-btn-px: var(--ctl-px-md);
+  --ink-btn-border: var(--ink-border-width);
+  /* Border-box, so every variant's face is the control height whatever its
+     border, and a quiet Cancel lines up with a primary Save. */
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--ctl-gap-md);
   min-height: var(--ctl-h-md);
-  padding: 0 var(--ctl-px-md);
+  padding: var(--space-1) calc(var(--ink-btn-px) - var(--ink-btn-border));
   border-radius: var(--ctl-r-md);
-  border: var(--ink-border-width) solid var(--color-text);
+  border: var(--ink-btn-border) solid var(--color-text);
+  line-height: var(--leading-snug);
+  text-align: center;
   font-family: var(--font-body);
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
@@ -299,6 +306,21 @@
 }
 
 .ink-btn--block { width: 100%; }
+
+.ink-btn--sm {
+  --ink-btn-px: var(--ctl-px-sm);
+  min-height: var(--ctl-h-sm);
+  gap: var(--ctl-gap-sm);
+  border-radius: var(--ctl-r-sm);
+  font-size: var(--text-base);
+}
+.ink-btn--lg {
+  --ink-btn-px: var(--ctl-px-lg);
+  min-height: var(--ctl-h-lg);
+  gap: var(--ctl-gap-lg);
+  border-radius: var(--ctl-r-lg);
+  font-size: var(--text-lg);
+}
 
 /* The one control on a screen that is actually asking a question. */
 .ink-btn--primary {
@@ -313,9 +335,11 @@
 .ink-btn--primary:hover:not(:disabled) { filter: brightness(1.06); }
 .ink-btn--primary:active:not(:disabled) { --ink-lift: var(--ink-press-compact); }
 
+/* Not --color-destructive: white on #FF3B30 is 3.55:1, under the 4.5:1 a 15px
+   label needs. The fill is the one token derived for a white label. */
 .ink-btn--danger {
-  background: var(--color-destructive);
-  color: #fff;
+  background: var(--color-destructive-fill);
+  color: var(--color-text-on-destructive);
   box-shadow: var(--ink-lift) var(--ink-lift) 0 var(--border-ink);
   transform: translate(
     calc(var(--ink-rest) - var(--ink-lift)),
@@ -327,15 +351,19 @@
 
 /* Everything that is not the question. Flat, hairline, no plate. */
 .ink-btn--quiet {
+  --ink-btn-border: var(--ink-hairline-width);
   background: var(--color-surface);
-  border-width: var(--ink-hairline-width);
-  border-color: var(--color-border);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 .ink-btn--quiet:hover:not(:disabled) { border-color: var(--color-text); }
-.ink-btn--quiet:active:not(:disabled) { transform: translate(1px, 1px); }
+.ink-btn--quiet:active:not(:disabled) { transform: translate(1px, 1px); background: var(--color-pressed); }
 
-.ink-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+.ink-btn:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; filter: none; }
+/* Busy is not disabled: the press was answered, so the button keeps its look. */
+.ink-btn[data-loading] { opacity: 1; cursor: progress; }
+/* The arc in the label's own colour, so it shows on a purple or red face. */
+.ink-btn .ink-spinner { border-color: transparent; border-top-color: currentColor; border-right-color: currentColor; }
 .ink-btn:focus-visible { outline: 2px solid var(--border-ink); outline-offset: 3px; }
 
 /* ── Badge ───────────────────────────────────────────────────────────────── */
@@ -380,14 +408,19 @@
   align-items: flex-start;
   gap: var(--space-2);
   margin: 0;
-  padding: var(--ctl-py-sm) var(--ctl-px-sm);
+  padding: var(--space-3);
   border: var(--ink-hairline-width) solid var(--ink-tone-fg, var(--color-text-secondary));
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--ink-tone-soft, var(--color-neutral-soft));
   color: var(--ink-tone-fg, var(--color-text-secondary));
   font-size: var(--text-sm);
   line-height: var(--leading-base);
 }
+/* The icon sits on the first line rather than the block's centre. */
+.ink-notice > svg { flex-shrink: 0; margin-top: 1px; }
+.ink-notice__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.ink-notice__text { margin: 0; }
+.ink-notice__action { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* ── Meter ───────────────────────────────────────────────────────────────── */
 
@@ -395,7 +428,7 @@
   height: 6px;
   border-radius: var(--radius-pill);
   background: var(--color-border);
-  border: var(--ink-hairline-width) solid var(--color-text);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
   overflow: hidden;
 }
 
@@ -430,9 +463,11 @@
   padding: 0;
   border: var(--ink-border-width) solid var(--color-text);
   border-radius: var(--radius-pill);
-  background: var(--color-border);
+  background: var(--color-border-strong);
   cursor: pointer;
   transition: background var(--dur-base) ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .ink-switch__knob {
@@ -448,8 +483,29 @@
 
 .ink-switch[aria-checked="true"] { background: var(--color-accent); }
 .ink-switch[aria-checked="true"] .ink-switch__knob { transform: translateX(18px); }
-.ink-switch:disabled { opacity: 0.5; cursor: not-allowed; }
+/* The knob gives under the pointer, so the press is felt before the flip. */
+.ink-switch:active:not(:disabled) .ink-switch__knob { scale: 0.88; }
+.ink-switch:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-switch:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+/* ── Labelled control ──────────────────────────────────────────────────────
+ *
+ * A switch or checkbox with its words beside it. The words are inside the
+ * label, so a click on them reaches the control.
+ */
+
+.ink-labelled {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--ctl-h-md);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ink-labelled[data-disabled] { cursor: not-allowed; }
+.ink-labelled[data-disabled] .ink-labelled__text { opacity: var(--ink-disabled-opacity); }
+.ink-labelled__text { min-width: 0; }
 
 /* ── Reach ───────────────────────────────────────────────────────────────── *
  *
@@ -904,7 +960,7 @@
 .ink-tabs__tab[aria-selected="true"] { color: var(--color-text); }
 .ink-tabs__tab[aria-selected="true"]::after { background: var(--color-accent-line); }
 .ink-tabs__tab:hover:not(:disabled) { color: var(--color-text); }
-.ink-tabs__tab:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-tabs__tab:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-tabs__tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 .ink-tabs__badge {
@@ -1041,10 +1097,13 @@
   width: var(--ink-avatar-size, 32px);
   height: var(--ink-avatar-size, 32px);
   font-size: calc(var(--ink-avatar-size, 32px) * 0.38);
+  box-sizing: border-box;
   border-radius: 50%;
   overflow: hidden;
-  background: var(--color-border);
+  background: var(--color-neutral-soft);
+  border: var(--ink-hairline-width) solid var(--color-border);
   color: var(--color-text-secondary);
+  line-height: 1;
   font-family: var(--font-body);
   font-weight: var(--weight-bold);
   letter-spacing: 0.02em;
@@ -1056,7 +1115,7 @@
 .ink-toaster {
   position: fixed;
   left: 50%;
-  bottom: max(var(--space-6), env(safe-area-inset-bottom, 0px));
+  bottom: calc(max(var(--space-6), env(safe-area-inset-bottom, 0px)) + var(--ink-toast-offset, 0px));
   transform: translateX(-50%);
   z-index: 60;
   display: flex;
@@ -1070,7 +1129,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--ctl-py-md) var(--pad-md);
+  min-height: calc(var(--tap-min) + var(--space-2));
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--pad-md);
   border: var(--ink-border-width) solid var(--color-text);
   border-radius: var(--ctl-r-md);
   background: var(--color-surface);
@@ -1081,10 +1141,14 @@
   animation: ink-toast-in var(--dur-base) var(--ink-ease);
 }
 .ink-toast > span:first-child { flex: 1 1 auto; }
+.ink-toast__text { flex: 1 1 auto; padding: var(--space-2) 0; line-height: var(--leading-snug); }
+.ink-toast__dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--ink-tone-solid, var(--color-neutral)); }
 .ink-toast__action {
   border: none;
   background: none;
-  padding: 0;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
   font: inherit;
   font-weight: var(--weight-bold);
   color: var(--ink-tone-fg, var(--color-text-secondary));
@@ -1092,36 +1156,48 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.ink-toast__action:hover { background: var(--color-hover); }
 .ink-toast__close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
   border: none;
+  border-radius: var(--radius-sm);
   background: none;
-  padding: 0 var(--space-1);
-  font-size: 18px;
-  line-height: 1;
-  color: var(--color-text-tertiary);
+  padding: 0;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
+.ink-toast__close:hover { background: var(--color-hover); color: var(--color-text); }
+.ink-toast__action:focus-visible, .ink-toast__close:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 @keyframes ink-toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* ═══ Input ════════════════════════════════════════════════════════════════ */
 
 .ink-input { display: flex; flex-direction: column; gap: var(--space-1); }
 
+/* Focus thickens the line from one pixel to two, and the padding gives the
+   pixel back so the text does not move when the caret arrives. */
 .ink-input__box {
+  --ink-field-border: var(--ink-hairline-width);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-height: var(--ctl-h-md);
-  padding: 0 var(--ctl-px-sm);
-  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  padding: 0 calc(var(--ctl-px-sm) - var(--ink-field-border));
+  border: var(--ink-field-border) solid var(--color-border-strong);
   border-radius: var(--ctl-r-md);
   background: var(--color-surface);
-  transition: border-color var(--dur-base) ease, box-shadow var(--dur-base) ease;
+  transition: border-color var(--dur-base) ease;
 }
 .ink-input__box:focus-within {
+  --ink-field-border: var(--ink-border-width);
   border-color: var(--color-accent-line);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
+.ink-input[data-disabled] .ink-input__box { opacity: var(--ink-disabled-opacity); }
 .ink-input input {
   flex: 1 1 auto;
   min-width: 0;
@@ -1134,16 +1210,18 @@
 }
 .ink-input input:focus { outline: none; }
 .ink-input input::placeholder { color: var(--color-text-tertiary); }
-.ink-input__lead, .ink-input__trail { display: flex; color: var(--color-text-tertiary); flex-shrink: 0; }
-.ink-input--invalid .ink-input__box { border-color: var(--color-destructive-fg); }
-.ink-input__error { margin: 0; font-size: var(--text-sm); color: var(--color-destructive-fg); }
+.ink-input__lead, .ink-input__trail { display: flex; color: var(--color-text-secondary); flex-shrink: 0; }
+.ink-input--invalid .ink-input__box, .ink-input--invalid .ink-textarea { border-color: var(--color-destructive-fg); }
+.ink-input__error { margin: 0; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-destructive-fg); }
 
 /* ═══ Text area ════════════════════════════════════════════════════════════ */
 
 .ink-textarea {
+  --ink-field-border: var(--ink-hairline-width);
+  box-sizing: border-box;
   width: 100%;
-  padding: var(--ctl-py-md) var(--ctl-px-sm);
-  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  padding: calc(var(--ctl-py-md) - var(--ink-field-border)) calc(var(--ctl-px-sm) - var(--ink-field-border));
+  border: var(--ink-field-border) solid var(--color-border-strong);
   border-radius: var(--ctl-r-md);
   background: var(--color-surface);
   font-family: var(--font-body);
@@ -1154,14 +1232,28 @@
   overflow-y: auto;
 }
 .ink-textarea:focus {
+  --ink-field-border: var(--ink-border-width);
   outline: none;
   border-color: var(--color-accent-line);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
+.ink-textarea::placeholder { color: var(--color-text-tertiary); }
+.ink-textarea:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 
 /* ═══ Select ═══════════════════════════════════════════════════════════════ */
 
 .ink-select { position: relative; display: inline-flex; }
+/* The drawn chevron is for markup written by hand; the component brings the
+   house icon instead, on the same stroke as every other mark. */
+.ink-select:has(.ink-select__mark)::after { display: none; }
+.ink-select__mark {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
 .ink-select::after {
   content: "";
   position: absolute;
@@ -1175,10 +1267,15 @@
   pointer-events: none;
 }
 .ink-select select {
+  --ink-field-border: var(--ink-hairline-width);
+  box-sizing: border-box;
   appearance: none;
+  /* Fills its box, so the chevron stays inside the field however wide the
+     parent stretches the wrapper. */
+  width: 100%;
   min-height: var(--ctl-h-md);
-  padding: 0 var(--space-8) 0 var(--ctl-px-sm);
-  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  padding: 0 var(--space-10) 0 calc(var(--ctl-px-sm) - var(--ink-field-border));
+  border: var(--ink-field-border) solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   font-family: var(--font-body);
@@ -1187,12 +1284,16 @@
   color: var(--color-text);
   cursor: pointer;
 }
-.ink-select select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.ink-select select:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-select select:focus { --ink-field-border: var(--ink-border-width); outline: none; border-color: var(--color-accent-line); }
+.ink-select select:hover:not(:disabled):not(:focus) { border-color: var(--color-text); }
+.ink-select select:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
+.ink-select[data-empty] select { color: var(--color-text-tertiary); font-weight: var(--weight-regular); }
 
 /* ═══ Checkbox ═════════════════════════════════════════════════════════════ */
 
 .ink-checkbox {
+  box-sizing: border-box;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1216,17 +1317,26 @@
   height: 0;
   border-bottom: 2px solid var(--color-text-on-accent);
 }
-.ink-checkbox:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-checkbox__icon { display: flex; color: var(--color-text-on-accent); }
+.ink-checkbox[data-state="off"]:active:not(:disabled) { background: var(--color-pressed); }
+.ink-checkbox:not([data-state="off"]):active:not(:disabled) { background: var(--color-accent-hover); }
+.ink-checkbox:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-checkbox:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 
 /* ═══ Slider ═══════════════════════════════════════════════════════════════ */
 
 .ink-slider { width: 100%; height: 26px; appearance: none; background: transparent; cursor: pointer; }
+/* WebKit has no fill of its own, so the track paints one up to the thumb's
+   centre: half a thumb in, then the value's share of what is left. */
 .ink-slider::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: var(--radius-pill);
-  background: var(--color-border);
-  border: var(--ink-hairline-width) solid var(--color-text);
+  background: linear-gradient(
+    to right,
+    var(--color-accent) calc(10px + (100% - 20px) * var(--ink-fill, 0)),
+    var(--color-border) 0
+  );
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
 }
 .ink-slider::-webkit-slider-thumb {
   appearance: none;
@@ -1242,8 +1352,9 @@
   height: 6px;
   border-radius: var(--radius-pill);
   background: var(--color-border);
-  border: var(--ink-hairline-width) solid var(--color-text);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
 }
+.ink-slider::-moz-range-progress { height: 6px; border-radius: var(--radius-pill); background: var(--color-accent); }
 .ink-slider::-moz-range-thumb {
   width: 20px;
   height: 20px;
@@ -1252,13 +1363,15 @@
   border: var(--ink-border-width) solid var(--color-text);
   box-shadow: var(--ink-press-compact) var(--ink-press-compact) 0 var(--border-ink);
 }
-.ink-slider:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-slider:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-slider:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
 
 /* ═══ Dialog and sheet ═════════════════════════════════════════════════════ */
 
 .ink-dialog, .ink-sheet { padding: 0; border: none; background: none; max-width: none; max-height: none; }
-.ink-dialog::backdrop, .ink-sheet::backdrop { background: rgba(23, 22, 22, 0.42); }
+/* The fallback is for engines where ::backdrop does not inherit custom
+   properties yet; without it the scrim would be transparent there. */
+.ink-dialog::backdrop, .ink-sheet::backdrop { background: var(--color-scrim, rgba(23, 22, 22, 0.42)); }
 
 .ink-dialog { margin: auto; }
 .ink-dialog__panel {
@@ -1288,14 +1401,21 @@
 .ink-sheet--right { margin: 0 0 0 auto; height: 100%; }
 .ink-sheet--left { margin: 0 auto 0 0; height: 100%; }
 .ink-sheet__panel {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-6);
-  padding-bottom: max(var(--space-6), env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - var(--space-6));
+  padding: var(--space-5);
+  padding-bottom: max(var(--space-5), env(safe-area-inset-bottom, 0px));
   background: var(--color-surface);
   border: var(--ink-border-width) solid var(--color-text);
 }
+.ink-sheet__head { display: flex; flex-direction: column; gap: var(--space-2); }
+.ink-sheet__description { margin: 0; font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-text-secondary); }
+.ink-sheet__body { display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; }
+/* The body scrolls once the panel reaches the viewport; the title stays. */
+.ink-sheet__body[data-scroll] { overflow-y: auto; overscroll-behavior: contain; }
 .ink-sheet--bottom .ink-sheet__panel { border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; border-bottom: none; }
 .ink-sheet--right .ink-sheet__panel { width: min(420px, 92vw); height: 100%; border-radius: var(--radius-2xl) 0 0 var(--radius-2xl); border-right: none; }
 .ink-sheet--left .ink-sheet__panel { width: min(420px, 92vw); height: 100%; border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0; border-left: none; }
@@ -1338,7 +1458,7 @@
 .ink-sidebar--rail .ink-nav__badge { position: absolute; top: var(--space-1); left: 55%; margin-left: 0; }
 
 .ink-nav__item:hover:not(:disabled) { color: var(--color-text); background: var(--color-hover); }
-.ink-nav__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.ink-nav__item:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-nav__item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .ink-nav__item[aria-current="page"] { color: var(--color-text); }
 
@@ -1615,7 +1735,7 @@
   transition: background var(--dur-base) ease;
 }
 .ink-radio:hover:not(:disabled) { background: var(--color-hover); }
-.ink-radio:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-radio:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-radio:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 .ink-radio__dot {
@@ -1684,7 +1804,7 @@
   cursor: pointer;
 }
 .ink-menu__item:hover:not(:disabled) { background: var(--color-hover); }
-.ink-menu__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.ink-menu__item:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-menu__item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .ink-menu__item[data-tone="danger"] { color: var(--color-destructive-fg); }
 /* A rule above, for separating the destructive one from the routine ones. */
@@ -1781,7 +1901,7 @@
 }
 .ink-calendar__day:hover:not(:disabled) { background: var(--color-hover); }
 .ink-calendar__day:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
-.ink-calendar__day:disabled { opacity: 0.3; cursor: not-allowed; }
+.ink-calendar__day:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 
 /* Borrowed from the neighbouring month: present, so the grid keeps its shape,
    and quiet, so it does not read as part of this month. */
@@ -1833,7 +1953,7 @@
 }
 .ink-picker__field:hover:not(:disabled) { border-color: var(--color-text); }
 .ink-picker__field:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.ink-picker__field:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-picker__field:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-picker__value--empty { color: var(--color-text-tertiary); font-weight: var(--weight-regular); }
 
 .ink-picker__mark {
@@ -1856,7 +1976,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 .ink-range { position: relative; height: 26px; display: flex; align-items: center; }
-.ink-range[data-disabled] { opacity: 0.5; }
+.ink-range[data-disabled] { opacity: var(--ink-disabled-opacity); }
 
 .ink-range__track {
   position: absolute;
@@ -1864,7 +1984,8 @@
   height: 6px;
   border-radius: var(--radius-pill);
   background: var(--color-border);
-  border: var(--ink-hairline-width) solid var(--color-text);
+  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  overflow: hidden;
 }
 .ink-range__fill { position: absolute; top: 0; bottom: 0; background: var(--color-accent); }
 
@@ -2133,17 +2254,21 @@
 /* ═══ Search & autocomplete ════════════════════════════════════════════════ */
 
 .ink-search {
+  --ink-field-border: var(--ink-hairline-width);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: var(--ctl-gap-sm);
   min-height: var(--ctl-h-md);
-  padding: 0 var(--ctl-px-sm);
-  border: var(--ink-hairline-width) solid var(--color-border-strong);
+  padding: 0 calc(var(--ctl-px-sm) - var(--ink-field-border)) 0 calc(var(--ctl-px-pill-sm) - var(--ink-field-border));
+  border: var(--ink-field-border) solid var(--color-border-strong);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
-  transition: border-color var(--dur-base) ease, box-shadow var(--dur-base) ease;
+  transition: border-color var(--dur-base) ease;
 }
-.ink-search:focus-within { border-color: var(--color-accent-line); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.ink-search:focus-within { --ink-field-border: var(--ink-border-width); border-color: var(--color-accent-line); }
+.ink-search[data-disabled] { opacity: var(--ink-disabled-opacity); }
+.ink-search__icon { display: flex; flex-shrink: 0; color: var(--color-text-secondary); }
 .ink-search input {
   flex: 1 1 auto; min-width: 0;
   border: none; background: none; padding: 0;
@@ -2168,12 +2293,16 @@
   transform: rotate(45deg);
 }
 .ink-search__clear {
-  flex-shrink: 0; width: var(--space-5); height: var(--space-5);
+  position: relative;
+  flex-shrink: 0; width: 22px; height: 22px;
   display: grid; place-items: center; padding: 0;
   border: none; border-radius: var(--radius-pill);
   background: var(--color-border); color: var(--color-text-secondary);
-  font-size: 14px; line-height: 1; cursor: pointer;
+  cursor: pointer;
 }
+/* A 22px disc with a 44px target, so the clear is easy to hit and quiet to see. */
+.ink-search__clear::after { content: ""; position: absolute; inset: -11px; }
+.ink-search__clear:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .ink-search__clear:hover { background: var(--color-border-strong); color: var(--color-text); }
 
 .ink-autocomplete { position: relative; }
@@ -2188,6 +2317,7 @@
 }
 .ink-autocomplete__option {
   min-height: var(--ctl-h-md); display: flex; align-items: center;
+  white-space: pre-wrap;
   padding: 0 var(--ctl-px-sm); border-radius: var(--ctl-r-sm);
   font-size: var(--text-base); cursor: pointer;
 }
@@ -2198,17 +2328,20 @@
 /* ═══ Number field ═════════════════════════════════════════════════════════ */
 
 .ink-number {
-  display: inline-flex; align-items: center;
+  box-sizing: border-box;
+  display: inline-flex; align-items: stretch;
   min-height: var(--ctl-h-md);
   border: var(--ink-hairline-width) solid var(--color-border-strong);
   border-radius: var(--ctl-r-md);
   background: var(--color-surface);
   overflow: hidden;
 }
-.ink-number[data-disabled] { opacity: 0.5; }
-.ink-number:focus-within { border-color: var(--color-accent-line); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.ink-number[data-disabled] { opacity: var(--ink-disabled-opacity); }
+/* An inset ring rather than a thicker border, so the steppers do not shift. */
+.ink-number:focus-within { border-color: var(--color-accent-line); box-shadow: inset 0 0 0 1px var(--color-accent-line); }
 .ink-number input {
-  width: 4ch; min-width: 0; flex: 1 1 auto;
+  width: 5ch; min-width: 0; flex: 1 1 auto;
+  font-weight: var(--weight-semibold);
   border: none; background: none; padding: 0;
   text-align: center;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
@@ -2217,13 +2350,17 @@
 .ink-number input:focus { outline: none; }
 .ink-number__suffix { padding-right: var(--space-2); font-size: var(--text-sm); color: var(--color-text-secondary); }
 .ink-number__step {
-  width: var(--ctl-h-md); height: var(--ctl-h-md); flex-shrink: 0;
+  width: var(--ctl-h-md); flex-shrink: 0;
   display: grid; place-items: center; padding: 0;
   border: none; background: none;
-  color: var(--color-text-secondary); font-size: 16px; cursor: pointer;
+  color: var(--color-text); cursor: pointer;
 }
-.ink-number__step:hover:not(:disabled) { background: var(--color-hover); color: var(--color-text); }
-.ink-number__step:disabled { opacity: 0.35; cursor: not-allowed; }
+.ink-number__step:first-child { border-right: var(--ink-hairline-width) solid var(--color-border); }
+.ink-number__step:last-child { border-left: var(--ink-hairline-width) solid var(--color-border); }
+.ink-number__step:hover:not(:disabled) { background: var(--color-hover); }
+.ink-number__step:active:not(:disabled) { background: var(--color-pressed); }
+.ink-number__step:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
+.ink-number__step:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 /* ═══ Rating ═══════════════════════════════════════════════════════════════ */
 
@@ -2291,7 +2428,7 @@ button.ink-chip__press { cursor: pointer; }
    gets colours. An unresolved var() is not an error; it is silently nothing. */
 .ink-chip__icon { display: inline-flex; color: var(--ink-tone-fg, var(--color-text-secondary)); }
 .ink-chip[data-selected] { background: var(--ink-tone-soft, var(--color-neutral-soft)); border-color: var(--ink-tone-fg, var(--color-text-secondary)); color: var(--ink-tone-fg, var(--color-text-secondary)); }
-.ink-chip[data-disabled] { opacity: 0.5; }
+.ink-chip[data-disabled] { opacity: var(--ink-disabled-opacity); }
 .ink-chip__press:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* A separate control, so a chip you meant to select never vanishes instead. */
@@ -2322,6 +2459,12 @@ button.ink-chip__press { cursor: pointer; }
 .ink-text[data-tone="tertiary"] { color: var(--color-text-tertiary); }
 .ink-text[data-mono] { font-family: var(--font-mono); }
 .ink-text[data-numeric] { font-variant-numeric: tabular-nums; }
+.ink-text[data-clamp] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--ink-lines);
+  overflow: hidden;
+}
 
 .ink-link {
   border: none; background: none; padding: 0;
@@ -2368,7 +2511,7 @@ button.ink-chip__press { cursor: pointer; }
 .ink-listitem--pressable:hover { background: var(--color-hover); }
 .ink-listitem--pressable:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .ink-listitem[data-selected] { background: var(--color-accent-soft); }
-.ink-listitem:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-listitem:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-listitem__lead, .ink-listitem__trail { display: flex; align-items: center; flex-shrink: 0; }
 .ink-listitem__trail { margin-left: auto; color: var(--color-text-secondary); }
 .ink-listitem__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -2397,6 +2540,8 @@ button.ink-chip__press { cursor: pointer; }
   transition: transform var(--dur-base) var(--ink-ease);
 }
 .ink-accordion__item[open] .ink-accordion__chev { transform: rotate(-135deg) translate(-2px, -2px); }
+.ink-accordion__mark { display: flex; flex-shrink: 0; color: var(--color-text-secondary); transition: transform var(--dur-base) var(--ink-ease); }
+.ink-accordion__item[open] .ink-accordion__mark { transform: rotate(180deg); }
 .ink-accordion__body { padding-bottom: var(--pad-md); font-size: var(--text-base); color: var(--color-text-secondary); line-height: var(--leading-base); }
 
 /* ═══ Timeline ═════════════════════════════════════════════════════════════ */
@@ -2437,7 +2582,7 @@ button.ink-chip__press { cursor: pointer; }
 }
 .ink-pagination__page:hover:not([aria-current]), .ink-pagination__step:hover:not(:disabled) { background: var(--color-hover); color: var(--color-text); }
 .ink-pagination__page[aria-current] { background: var(--color-accent); color: var(--color-text-on-accent); }
-.ink-pagination__step:disabled { opacity: 0.3; cursor: not-allowed; }
+.ink-pagination__step:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-pagination__page:focus-visible, .ink-pagination__step:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .ink-pagination__gap { min-width: var(--space-6); text-align: center; color: var(--color-text-tertiary); }
 
@@ -2502,9 +2647,10 @@ button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); o
   transform: translate(calc(var(--ink-rest) - var(--ink-press-compact)), calc(var(--ink-rest) - var(--ink-press-compact)));
   box-shadow: var(--ink-press-compact) var(--ink-press-compact) 0 var(--border-ink);
 }
-.ink-fab:disabled { opacity: 0.5; cursor: not-allowed; }
+.ink-fab:disabled { opacity: var(--ink-disabled-opacity); cursor: not-allowed; }
 .ink-fab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
-.ink-fab--extended { width: auto; padding: 0 var(--ctl-px-lg); }
+/* Fits its content, so a static fab in a column does not stretch to a bar. */
+.ink-fab--extended { width: fit-content; padding: 0 var(--ctl-px-lg); }
 .ink-fab[data-position="bottom-end"], .ink-fab[data-position="bottom-start"] {
   position: fixed; z-index: 45;
   bottom: max(var(--space-6), env(safe-area-inset-bottom, 0px));
@@ -2539,8 +2685,10 @@ button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); o
   border-radius: var(--radius-pill);
   background: var(--color-surface);
 }
-.ink-speeddial .ink-fab { transition: transform var(--dur-base) var(--ink-ease); }
-.ink-speeddial[data-open] .ink-fab { transform: rotate(45deg); }
+/* Only the mark turns. Turning the button would spin its plate, and the plate
+   is the one thing that never moves. */
+.ink-speeddial__mark { display: flex; transition: transform var(--dur-base) var(--ink-ease); }
+.ink-speeddial[data-open] .ink-speeddial__mark { transform: rotate(45deg); }
 
 /* ═══ Drawer ═══════════════════════════════════════════════════════════════ */
 
@@ -2552,7 +2700,7 @@ button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); o
 .ink-drawer__scrim {
   position: absolute; inset: 0;
   border: none; padding: 0;
-  background: rgba(23, 22, 22, 0.42);
+  background: var(--color-scrim);
   opacity: 0; cursor: pointer;
   transition: opacity var(--dur-base) ease;
 }
@@ -2579,23 +2727,35 @@ button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); o
 .ink-backdrop {
   position: fixed; inset: 0; z-index: 80;
   display: grid; place-items: center;
-  background: rgba(23, 22, 22, 0.55);
+  background: var(--color-scrim);
   opacity: 0; visibility: hidden;
   transition: opacity var(--dur-base) ease, visibility 0s var(--dur-base);
 }
 .ink-backdrop[data-open] { opacity: 1; visibility: visible; transition: opacity var(--dur-base) ease, visibility 0s; }
-.ink-backdrop__body { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); color: #fff; }
+/* The words sit on a card, not on the scrim: white over the light scrim
+   measured 2.8:1. */
+.ink-backdrop__body {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+  max-width: min(320px, calc(100vw - var(--space-12)));
+  padding: var(--pad-md) var(--pad-lg);
+  border: var(--ink-border-width) solid var(--color-text);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: center;
+}
 .ink-backdrop__label { font-size: var(--text-md); font-weight: var(--weight-semibold); }
-.ink-backdrop .ink-spinner { border-color: rgba(255,255,255,0.3); border-top-color: #fff; }
 
 .ink-avatargroup { display: inline-flex; align-items: center; }
 /* Overlapped, with a ring so the faces separate against each other. */
-.ink-avatargroup > * { margin-left: calc(var(--ink-avatar-size, 32px) * -0.3); box-shadow: 0 0 0 2px var(--color-bg); }
+/* A ring in the surface colour, so overlapping faces read as a stack rather
+   than as one shape with a bite out of it. */
+.ink-avatargroup > * { margin-left: calc(var(--ink-avatar-size, 32px) * -0.16); box-shadow: 0 0 0 var(--ink-border-width) var(--color-surface); }
 .ink-avatargroup > *:first-child { margin-left: 0; }
 .ink-avatargroup__rest {
   display: inline-grid; place-items: center;
   border-radius: 50%;
-  background: var(--color-border);
+  background: var(--color-neutral-soft);
   color: var(--color-text-secondary);
   font-family: var(--font-mono); font-weight: var(--weight-bold);
 }
@@ -2619,5 +2779,5 @@ button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); o
 
 @media (prefers-reduced-motion: reduce) {
   .ink-drawer__panel, .ink-drawer__scrim, .ink-backdrop,
-  .ink-accordion__chev, .ink-speeddial .ink-fab, .ink-fab { transition-duration: 1ms; }
+  .ink-accordion__chev, .ink-accordion__mark, .ink-speeddial__mark, .ink-fab { transition-duration: 1ms; }
 }

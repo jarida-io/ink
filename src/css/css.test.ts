@@ -24,6 +24,18 @@ describe("the stylesheet", () => {
       "--ink-lift",
       // Set per instance by InkAvatarGroup, from its `size` prop.
       "--ink-avatar-size",
+      // Per element: the solid tone a toast's dot is painted in.
+      "--ink-tone-solid",
+      // Per instance, from props: a slider's position, a clamp's line count,
+      // a toaster's clearance.
+      "--ink-fill",
+      "--ink-lines",
+      "--ink-toast-offset",
+      // Local channels, so a variant changes one number rather than restating
+      // the padding arithmetic.
+      "--ink-btn-px",
+      "--ink-btn-border",
+      "--ink-field-border",
     ]);
     const missing = new Set<string>();
 

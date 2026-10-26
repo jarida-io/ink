@@ -11,6 +11,7 @@
  * single component with a `mode` prop is three components sharing a bug.
  */
 import { useCallback, useMemo, useRef, useState } from "react";
+import { renderIconSlot } from "./icon.js";
 import {
   addMonths,
   compareDates,
@@ -135,7 +136,7 @@ export function InkCalendar({
           aria-label="Previous month"
           onClick={() => setView(addMonths(view, -1))}
         >
-          <span className="ink-calendar__chev" data-dir="prev" aria-hidden="true" />
+          {renderIconSlot("chevron-left", 20)}
         </button>
         {/* A live region: paging with the arrows has to announce where you are. */}
         <span className="ink-calendar__month" aria-live="polite">
@@ -147,7 +148,7 @@ export function InkCalendar({
           aria-label="Next month"
           onClick={() => setView(addMonths(view, 1))}
         >
-          <span className="ink-calendar__chev" data-dir="next" aria-hidden="true" />
+          {renderIconSlot("chevron-right", 20)}
         </button>
       </div>
 
@@ -363,6 +364,9 @@ export function InkTimePicker({
           );
         })}
       </select>
+      <span className="ink-select__mark" aria-hidden="true">
+        {renderIconSlot("chevron-down", 18)}
+      </span>
     </span>
   );
 }

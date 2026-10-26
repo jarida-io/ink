@@ -6,6 +6,8 @@ import { useEdgeBudget } from "../shared/budget.js";
 import { reachFor } from "../core/reach.js";
 import { renderIconSlot, type InkIconSlot } from "./icon.js";
 import { TOUCH } from "../tokens/space.js";
+import { controlIconSize, type ControlSize } from "../tokens/control.js";
+import { InkSpinner } from "./feedback.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -24,8 +26,16 @@ export type InkButtonVariant = "primary" | "quiet" | "danger";
 
 export interface InkButtonProps {
   variant?: InkButtonVariant;
+  /** `md` is the touch floor. `sm` keeps the floor through invisible reach. */
+  size?: ControlSize;
   onPress?: () => void;
   disabled?: boolean;
+  /**
+   * The press has been answered and the work is under way. The label stays —
+   * a button that swaps its words for a spinner has stopped saying what it is
+   * doing — and further presses are refused.
+   */
+  loading?: boolean;
   /** Full width. The hub uses this; the dense view rarely should. */
   block?: boolean;
   icon?: InkIconSlot;
@@ -36,8 +46,10 @@ export interface InkButtonProps {
 
 export function InkButton({
   variant = "quiet",
+  size = "md",
   onPress,
   disabled,
+  loading = false,
   block,
   icon,
   type = "button",
@@ -45,14 +57,24 @@ export function InkButton({
   children,
 }: InkButtonProps) {
   useEdgeBudget(variant !== "quiet");
+  const iconSize = controlIconSize(size);
   return (
     <button
       type={type}
-      className={cx("ink-btn", `ink-btn--${variant}`, block && "ink-btn--block", className)}
+      className={cx(
+        "ink-btn",
+        `ink-btn--${variant}`,
+        size !== "md" && `ink-btn--${size}`,
+        block && "ink-btn--block",
+        size === "sm" && "ink-reach",
+        className,
+      )}
       onClick={onPress}
-      disabled={disabled}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      data-loading={loading || undefined}
     >
-      {renderIconSlot(icon)}
+      {loading ? <InkSpinner label="" size={iconSize - 2} /> : renderIconSlot(icon, iconSize)}
       {children}
     </button>
   );
@@ -233,6 +255,11 @@ export interface InkSwitchProps {
   label?: string;
   labelledBy?: string;
   disabled?: boolean;
+  /**
+   * Shown beside the switch, and part of what can be pressed — words that do
+   * nothing when clicked are words people click twice.
+   */
+  children?: ReactNode;
   className?: string;
 }
 
@@ -242,22 +269,32 @@ export function InkSwitch({
   label,
   labelledBy,
   disabled,
+  children,
   className,
 }: InkSwitchProps) {
   const id = useId();
-  return (
+  const name = label ?? (typeof children === "string" ? children : undefined);
+  const control = (
     <button
       type="button"
       id={id}
       role="switch"
       aria-checked={checked}
-      aria-label={labelledBy ? undefined : label}
+      aria-label={labelledBy ? undefined : name}
       aria-labelledby={labelledBy}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cx("ink-switch", className)}
+      className={cx("ink-switch", !children && className)}
     >
       <span className="ink-switch__knob" />
     </button>
+  );
+  if (!children) return control;
+  // A label element forwards a click on the words to the button it wraps.
+  return (
+    <label className={cx("ink-labelled", className)} data-disabled={disabled || undefined}>
+      {control}
+      <span className="ink-labelled__text">{children}</span>
+    </label>
   );
 }

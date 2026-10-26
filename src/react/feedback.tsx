@@ -5,9 +5,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { toneColors, type InkTone } from "../core/tone.js";
@@ -30,11 +33,12 @@ function cx(...parts: (string | false | undefined | null)[]): string {
  */
 
 export function InkSpinner({ label, size = 18 }: { label: string; size?: number }) {
+  // An empty label is for a spinner inside a control that already says it is
+  // busy, which would otherwise be announced twice.
   return (
     <span
       className="ink-spinner"
-      role="status"
-      aria-label={label}
+      {...(label ? { role: "status", "aria-label": label } : { "aria-hidden": true })}
       style={{ width: size, height: size }}
     />
   );
@@ -168,11 +172,22 @@ export function readingTime(text: string): number {
 
 let counter = 0;
 
-export function InkToaster({ children }: { children: ReactNode }) {
+export function InkToaster({
+  children,
+  offset = 0,
+}: {
+  children: ReactNode;
+  /** Extra clearance above the bottom edge — a tab bar the toasts must not cover. */
+  offset?: number;
+}) {
   const [queue, setQueue] = useState<InkToastMessage[]>([]);
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const { color } = useInkTheme();
 
   const dismiss = useCallback((id: string) => {
+    const timer = timers.current.get(id);
+    if (timer !== undefined) clearTimeout(timer);
+    timers.current.delete(id);
     setQueue((current) => current.filter((t) => t.id !== id));
   }, []);
 
@@ -185,30 +200,56 @@ export function InkToaster({ children }: { children: ReactNode }) {
       // the reader may need to act on, and taking it away is taking away the
       // instructions.
       if (toast.tone !== "danger") {
-        setTimeout(() => dismiss(id), readingTime(toast.text));
+        timers.current.set(id, setTimeout(() => dismiss(id), readingTime(toast.text)));
       }
     },
     [dismiss],
   );
+
+  useEffect(() => {
+    const pending = timers.current;
+    return () => pending.forEach((timer) => clearTimeout(timer));
+  }, []);
 
   const api = useMemo(() => ({ show, dismiss }), [show, dismiss]);
 
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="ink-toaster" role="region" aria-label="Notifications">
+      <div
+        className="ink-toaster"
+        role="region"
+        aria-label="Notifications"
+        style={offset ? ({ "--ink-toast-offset": `${offset}px` } as CSSProperties) : undefined}
+      >
         {queue.map((toast) => {
-          const t = toneColors(toast.tone ?? "neutral", color);
+          const tone = toast.tone ?? "neutral";
+          const t = toneColors(tone, color);
           return (
             <div
               key={toast.id}
               className="ink-toast"
-              role={toast.tone === "danger" ? "alert" : "status"}
-              style={{ ["--ink-tone-fg" as string]: t.fg, ["--ink-tone-soft" as string]: t.soft }}
+              role={tone === "danger" ? "alert" : "status"}
+              data-tone={tone}
+              style={
+                {
+                  "--ink-tone-fg": t.fg,
+                  "--ink-tone-soft": t.soft,
+                  "--ink-tone-solid": t.solid,
+                } as CSSProperties
+              }
             >
-              <span>{toast.text}</span>
+              {tone !== "neutral" ? <span className="ink-toast__dot" aria-hidden="true" /> : null}
+              <span className="ink-toast__text">{toast.text}</span>
               {toast.action ? (
-                <button type="button" onClick={toast.action.onPress} className="ink-toast__action">
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onPress();
+                    dismiss(toast.id);
+                  }}
+                  className="ink-toast__action"
+                >
                   {toast.action.label}
                 </button>
               ) : null}
@@ -218,7 +259,7 @@ export function InkToaster({ children }: { children: ReactNode }) {
                 className="ink-toast__close"
                 aria-label="Dismiss"
               >
-                &times;
+                {renderIconSlot("x", 16)}
               </button>
             </div>
           );
@@ -349,8 +390,9 @@ export function InkBackdrop({
       aria-busy={open}
       onClick={onPress}
     >
+      {/* On a card, not the scrim: white on the light scrim measured 2.8:1. */}
       <div className="ink-backdrop__body">
-        {children ?? <InkSpinner label={label} size={28} />}
+        {children ?? <InkSpinner label="" size={28} />}
         <span className="ink-backdrop__label">{label}</span>
       </div>
     </div>

@@ -4,6 +4,7 @@
 import { useCallback, useId, useMemo, useRef, type ReactNode } from "react";
 import { ariaSort, nextSort, sortRows, type SortState } from "../headless/table.js";
 import type { SpaceStep } from "../tokens/space.js";
+import { renderIconSlot } from "./icon.js";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -486,7 +487,9 @@ export function InkAccordion({
           <summary className="ink-accordion__head">
             <span className="ink-accordion__title">{item.title}</span>
             {item.meta ? <span className="ink-accordion__meta">{item.meta}</span> : null}
-            <span className="ink-accordion__chev" aria-hidden="true" />
+            <span className="ink-accordion__mark" aria-hidden="true">
+                {renderIconSlot("chevron-down", 18)}
+              </span>
           </summary>
           <div className="ink-accordion__body">{item.content}</div>
         </details>
