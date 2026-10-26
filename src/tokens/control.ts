@@ -147,6 +147,13 @@ export const BORDER = {
 export type BorderWidth = keyof typeof BORDER;
 
 /**
+ * One value for "not now", everywhere. Before this a menu item faded to 0.45,
+ * a page arrow to 0.3 and a button to 0.5, so three disabled things on one
+ * screen looked like three different states.
+ */
+export const DISABLED_OPACITY = 0.45;
+
+/**
  * Container padding — a card, a panel, a sheet.
  *
  * Deliberately coarser than control padding and on its own scale, because a

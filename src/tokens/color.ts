@@ -170,11 +170,24 @@ export interface InkPalette {
   danger: string;
   dangerSoft: string;
   dangerFg: string;
+  /**
+   * The fill of a destructive button. Not `danger`: white on #FF3B30 is 3.55:1,
+   * under the 4.5:1 a 15px label needs, and charcoal on red reads as a warning.
+   */
+  dangerFill: string;
+  /** What sits on `dangerFill`. */
+  textOnDanger: string;
   info: string;
   infoSoft: string;
   infoFg: string;
   neutral: string;
   neutralSoft: string;
+
+  /**
+   * The dimming layer behind a modal. Per scheme, because the light scrim over a
+   * dark page dims it by almost nothing and the dialog stops reading as in front.
+   */
+  scrim: string;
 }
 
 export const LIGHT: InkPalette = {
@@ -223,6 +236,9 @@ export const LIGHT: InkPalette = {
   dangerSoft: "rgba(255, 59, 48, 0.10)",
   // #DC2626 alone measured 4.0:1 on some of the soft fills it sits on.
   dangerFg: "#B91C1C",
+  // 4.83:1 under white.
+  dangerFill: "#DC2626",
+  textOnDanger: "#FFFFFF",
   info: "#0072F5",
   infoSoft: "rgba(0, 114, 245, 0.05)",
   // Darkened from #4d94d4, which was 3.0:1 on white.
@@ -230,6 +246,8 @@ export const LIGHT: InkPalette = {
   // Darkened from #8E8E93, which was 2.9:1 on white.
   neutral: "#6C6C71",
   neutralSoft: "rgba(142, 142, 147, 0.12)",
+
+  scrim: "rgba(23, 22, 22, 0.42)",
 };
 
 export const DARK: InkPalette = {
@@ -282,12 +300,16 @@ export const DARK: InkPalette = {
   danger: "#FF3B30",
   dangerSoft: "rgba(255, 59, 48, 0.15)",
   dangerFg: "#F87171",
+  dangerFill: "#DC2626",
+  textOnDanger: "#FFFFFF",
   info: "#0072F5",
   infoSoft: "rgba(0, 114, 245, 0.12)",
   infoFg: "#60A5FA",
   // Was inheriting light's #8E8E93 at 4.4:1 on panel, under AA.
   neutral: "#9A9AA0",
   neutralSoft: "rgba(142, 142, 147, 0.12)",
+
+  scrim: "rgba(6, 5, 10, 0.64)",
 };
 
 /**

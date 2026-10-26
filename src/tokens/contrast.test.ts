@@ -101,6 +101,17 @@ describe.each([
     expect(passes(p.textOnAccent, p.accent, "text")).toBe(true);
   });
 
+  it("the label on a destructive button", () => {
+    expect(passes(p.textOnDanger, p.dangerFill, "text")).toBe(true);
+  });
+
+  it("every tone's label on its own solid fill", () => {
+    for (const tone of ["neutral", "success", "warning", "danger", "info"] as const) {
+      const t = toneColors(tone, p);
+      expect(passes(t.onSolid, t.solid, "text"), `${tone}: ${t.onSolid} on ${t.solid}`).toBe(true);
+    }
+  });
+
   it("text on the brand paper a stage is filled with", () => {
     expect(passes(p.text, p.brandSoft, "text")).toBe(true);
   });

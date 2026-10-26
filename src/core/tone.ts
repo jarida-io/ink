@@ -11,7 +11,7 @@
  * something you must first say which of these it is, and if it is none of them
  * it does not get colour — it gets the edge, or a hairline, or nothing.
  */
-import { readable } from "../tokens/contrast.js";
+import { bestOn, readable } from "../tokens/contrast.js";
 import type { InkPalette } from "../tokens/color.js";
 
 export type InkTone = "neutral" | "brand" | "success" | "warning" | "danger" | "info";
@@ -25,6 +25,16 @@ export interface ToneColors {
   solid: string;
   /** What sits on `solid`. */
   onSolid: string;
+}
+
+// The two labels anything solid can carry. Picked per fill rather than assumed:
+// white on the success green is 2.2:1.
+const ON_SOLID = ["#171616", "#FFFFFF"];
+
+/** The better label, and the fill nudged only as far as that label needs. */
+function solid(fill: string): Pick<ToneColors, "solid" | "onSolid"> {
+  const label = bestOn(ON_SOLID, fill);
+  return { solid: readable(fill, label, "text"), onSolid: label };
 }
 
 export function toneColors(tone: InkTone, color: InkPalette): ToneColors {
@@ -43,37 +53,33 @@ export function toneColors(tone: InkTone, color: InkPalette): ToneColors {
       return {
         fg: color.successFg,
         soft: color.successSoft,
-        solid: color.success,
-        onSolid: "#FFFFFF",
+        ...solid(color.success),
       };
     case "warning":
       return {
         fg: color.warningFg,
         soft: color.warningSoft,
-        solid: color.warning,
-        onSolid: "#171616",
+        ...solid(color.warning),
       };
     case "danger":
       return {
         fg: color.dangerFg,
         soft: color.dangerSoft,
-        solid: color.danger,
-        onSolid: "#FFFFFF",
+        solid: color.dangerFill,
+        onSolid: color.textOnDanger,
       };
     case "info":
       return {
         fg: color.infoFg,
         soft: color.infoSoft,
-        solid: color.info,
-        onSolid: "#FFFFFF",
+        ...solid(color.info),
       };
     case "neutral":
     default:
       return {
         fg: color.textSecondary,
         soft: color.neutralSoft,
-        solid: color.neutral,
-        onSolid: "#FFFFFF",
+        ...solid(color.neutral),
       };
   }
 }

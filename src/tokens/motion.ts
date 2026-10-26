@@ -35,3 +35,46 @@ export type Bezier = readonly [number, number, number, number];
 export function cssBezier(b: Bezier): string {
   return `cubic-bezier(${b.join(", ")})`;
 }
+
+/**
+ * A spring, in the two numbers a designer can reason about rather than the
+ * three a physics engine wants. `damping` is the ratio: 1 settles without
+ * overshoot, lower bounces. `response` is roughly how long it takes to get
+ * there, in seconds — not a duration, because a spring has none.
+ */
+export interface InkSpring {
+  damping: number;
+  response: number;
+}
+
+export const SPRING = {
+  /** Almost everything: arrives, and does not wobble on the way. */
+  default: { damping: 1, response: 0.35 },
+  /** Small controls — a switch knob, a thumb — where 350ms reads as lag. */
+  snappy: { damping: 1, response: 0.24 },
+  /** Only after a gesture that carried momentum. A flick earns the overshoot. */
+  momentum: { damping: 0.82, response: 0.35 },
+} as const satisfies Record<string, InkSpring>;
+
+/** Stiffness and damping for an engine that takes mass 1, as React Native's does. */
+export function springPhysics(spring: InkSpring): { stiffness: number; damping: number; mass: 1 } {
+  const omega = (2 * Math.PI) / spring.response;
+  return { stiffness: omega * omega, damping: 2 * spring.damping * omega, mass: 1 };
+}
+
+/**
+ * Where a release at `velocity` (px/s) would come to rest, the way a scroll
+ * decelerates. Snap to the target nearest this, not nearest the finger.
+ */
+export function projectMomentum(velocity: number, decelerationRate = 0.998): number {
+  return ((velocity / 1000) * decelerationRate) / (1 - decelerationRate);
+}
+
+/**
+ * Resistance past a bound: the further over, the less it follows. A hard stop
+ * reads as frozen; this reads as "nothing more here".
+ */
+export function rubberband(overshoot: number, dimension: number, constant = 0.55): number {
+  if (dimension <= 0) return 0;
+  return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
+}

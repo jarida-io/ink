@@ -20,6 +20,7 @@ import {
   CONTAINER_PAD,
   CONTROL_HEIGHT,
   CONTROL_RADIUS,
+  DISABLED_OPACITY,
   controlMetrics,
   controlPadX,
   controlPadY,
@@ -104,11 +105,15 @@ export function cssVariables(theme: InkTheme): Record<string, string> {
     "--color-destructive": c.danger,
     "--color-destructive-soft": c.dangerSoft,
     "--color-destructive-fg": c.dangerFg,
+    "--color-destructive-fill": c.dangerFill,
+    "--color-text-on-destructive": c.textOnDanger,
     "--color-info": c.info,
     "--color-info-soft": c.infoSoft,
     "--color-info-fg": c.infoFg,
     "--color-neutral": c.neutral,
     "--color-neutral-soft": c.neutralSoft,
+    "--color-scrim": c.scrim,
+    "--ink-disabled-opacity": String(DISABLED_OPACITY),
 
     // The edge. `--ink-lift` is the live offset and defaults to rest, which is
     // the name the shipped stylesheets already animate; `--ink-rest` is the
