@@ -88,6 +88,11 @@ Load the fonts before rendering — `requiredNativeFonts()` lists exactly which.
 Android ignores `fontWeight` on a runtime-registered family, so Ink resolves a
 family name per weight for you.
 
+Pass the safe-area insets to the provider once —
+`<InkProvider insets={useSafeAreaInsets()}>` — and every sheet, toast, fab and
+bottom bar clears the notch and the home indicator. React Native cannot measure
+them itself.
+
 ### Vue, Svelte, Solid, or no framework
 
 ```js
@@ -176,6 +181,25 @@ Hysteresis means entering a stage and leaving it use different thresholds, so a
 reader resting on a boundary — trackpad inertia, a thumb on a rubber-banding
 list — does not make the bar strobe. Any upward gesture returns it immediately,
 without waiting to cross anything on the way back.
+
+---
+
+## Motion
+
+Anything a finger can interrupt moves on a spring, in the two numbers a designer
+can reason about — a damping ratio and a response — rather than a duration:
+
+```ts
+SPRING.default   // damping 1, response 0.35: arrives without wobbling
+SPRING.momentum  // damping 0.82: only after a flick, which earns the overshoot
+```
+
+A spring starts from wherever the value is and keeps the speed it already had,
+so a sheet caught halfway down follows the finger from there instead of jumping.
+A dragged sheet is judged on release by where the flick is *heading*
+(`projectMomentum`), not where the finger let go, and resists past its bound
+(`rubberband`) rather than stopping dead. Reduced motion keeps every state change
+and drops the travel: overlays cross-fade, spinners slow rather than freeze.
 
 ---
 
@@ -280,7 +304,7 @@ Pretending otherwise would mean shipping a style system nobody asked for.
 ## Testing
 
 ```bash
-npm run verify   # two type-checks, plus 266 tests
+npm run verify   # two type-checks, plus 343 tests
 npm run build    # dist/ with declarations, plus the stylesheet
 ```
 

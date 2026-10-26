@@ -64,6 +64,14 @@ Fonts must load before render. `requiredNativeFonts()` returns the exact list.
 Android ignores `fontWeight` on a runtime-registered family, so Ink resolves a
 **family name per weight** — never pass `fontWeight` yourself.
 
+Hand the provider the safe-area insets once. React Native cannot measure them,
+and every sheet, toast, fab and bottom bar reads them from here:
+
+```tsx
+const insets = useSafeAreaInsets();   // react-native-safe-area-context
+<InkProvider scheme={scheme} insets={insets}>…</InkProvider>
+```
+
 ### Vue, Svelte, Solid, vanilla — no React at all
 
 ```js
@@ -111,6 +119,16 @@ Do not hardcode these; read them off the theme.
 
 `color.accent` is the untouched brand value and is only ever a **fill**.
 
+Two more fills exist because the obvious value failed:
+
+| Field | Value | Why |
+|---|---|---|
+| `color.dangerFill` / `textOnDanger` | `#DC2626` / white, 4.83:1 | white on `danger` (#FF3B30) is 3.55:1 under a 15px label |
+| `color.scrim` | per scheme | the light scrim over a dark page dims it by almost nothing |
+
+`toneColors(tone).onSolid` is picked per fill (white on the success green is
+2.2:1), and `solid` is nudged only as far as that label needs.
+
 ### Helpers
 
 ```ts
@@ -124,6 +142,23 @@ alpha(colour, amount): string                // resolved rgba()
 flatten(fg, bg): Rgb                         // composite a translucent colour
 grounds(palette): string[]                   // every ground a line can land on
 ```
+
+### Motion
+
+```ts
+SPRING.default   // { damping: 1, response: 0.35 } — arrives, never wobbles
+SPRING.snappy    // { damping: 1, response: 0.24 } — knobs, thumbs, small things
+SPRING.momentum  // { damping: 0.82, response: 0.35 } — only after a flick
+springPhysics(spring)          // { stiffness, damping, mass: 1 } for Animated.spring
+projectMomentum(velocityPxPerS) // where a release would come to rest
+rubberband(overshoot, dimension) // resistance past a bound
+DISABLED_OPACITY               // 0.45, the one value for "not now"
+```
+
+Anything a finger can interrupt moves on a spring, from wherever it is. Native
+dialogs, sheets, drawers, toasts, the switch knob and the accordion chevron all
+do; a bottom sheet follows a drag on its handle 1:1, resists upward, and decides
+on release from where the flick is *heading* rather than where it let go.
 
 ### Control geometry — `@jarida/ink/tokens`
 
@@ -235,19 +270,32 @@ InkDivider { orientation?="horizontal", tone?="hairline"|"ink", label? }
 
 ### Controls
 ```
-InkButton    { variant?="quiet"|"primary"|"danger", onPress?, disabled?, block?, icon? }
+InkButton    { variant?="quiet"|"primary"|"danger", size?="sm"|"md"|"lg", onPress?, disabled?,
+               loading?, block?, icon? }
 InkChoice    { selected, onSelect?, shape?="tile"|"pill", meta?, disabled?, role?="button"|"radio" }
 InkSegmented { label, value, options[{value,label,meta?,disabled?}], onChange, shape? }
-InkSwitch    { checked, onChange, label?, disabled? }
-InkCheckbox  { checked, onChange, label, indeterminate?, disabled? }
-InkInput     { value, onChange, label?, placeholder?, invalid?, disabled?, type?, lead?, trail? }
-InkTextArea  { value, onChange, label?, placeholder?, rows?=3, maxRows?=12, disabled? }
-InkSelect    { label, value, options[{value,label,disabled?}], onChange, disabled? }
+InkSwitch    { checked, onChange, label?, disabled?, children? }
+InkCheckbox  { checked, onChange, label?, indeterminate?, disabled?, children? }
+InkInput     { value, onChange, label?, placeholder?, invalid?, disabled?,
+               type?="text"|"search"|"email"|"url"|"number"|"password",
+               lead?, trail?, onSubmit?, inputProps? }
+InkTextArea  { value, onChange, label?, placeholder?, rows?=3, maxRows?=12, invalid?,
+               disabled?, inputProps? }
+InkSelect    { label, value?, options[{value,label,disabled?}], onChange, placeholder?, disabled? }
 InkSlider    { value, onChange, min?=0, max?=100, step?=1, label, format?, disabled? }
 InkRangeSlider { value: [number, number], onChange, min?, max?, step?, label, format? }
 InkRadioGroup  { label, value, options[{value,label,description?,disabled?}], onChange }
 InkMenu        { label, trigger, items[{key,label,icon?,onPress?,tone?,separated?}], align? }
 ```
+
+`loading` keeps the label and adds a spinner in the label's colour; presses are
+refused until it clears. Every button variant's face is the control height, so a
+quiet Cancel and a primary Save line up edge for edge.
+
+`children` on a switch or checkbox is shown beside it and is part of the target;
+`label` is what a screen reader hears and defaults to `children` when that is a
+string. `lead`/`trail` take an icon name. `inputProps` passes anything else
+through to the platform input — `autoComplete`, `textContentType`, a ref.
 
 **`InkRadioGroup` vs `InkSegmented`** — not a look, a question. A segment is for
 values that fit on a line; a radio is for choices that need explaining. Wanting a
@@ -297,7 +345,8 @@ InkNavbar { title?, largeTitle?=false, lead?, trail?, actions?,
             material?="auto"|"always"|"never", collapse?=false, collapsedBadge?,
             behaviour?, stage?, onStageChange?, scrollTarget? (react),
             topInset?, blurComponent? (native) }
-InkBottomBar  { label, items, value, onChange, moreLabel?, moreIcon?, onMore?, bottomInset? (native) }
+InkBottomBar  { label, items, value, onChange, moreLabel?, moreIcon?, onMore?, collapse?, stage?,
+                onExpand?, bottomInset? (native, defaults to the provider's), blurComponent? (native) }
 InkSidebar    { label, sections[{label?,items}], value, onChange,
                 variant?="sidebar"|"rail", header?, footer?, onToggle? }
 InkNav        { width, shape?, ...InkSidebar|InkBottomBar }   // picks by width
@@ -310,7 +359,7 @@ or `true`; **0 and false render nothing**, and anything over 99 becomes `99+`.
 
 ### Feedback & data
 ```
-InkNotice     { tone?, icon? }
+InkNotice     { tone?, icon?, action? }  // action sits under the words
 InkMeter      { value?, label }          // omit value -> indeterminate
 InkBadge      { tone?, icon? }
 InkSpinner    { label, size?=18 }        // label is REQUIRED
@@ -319,12 +368,13 @@ InkDots       { label }                  // the smallest loader
 InkSkeleton   { width?, height?=14, radius?, shimmer?=false }
 InkEmptyState { icon?, title, action? }
 InkAvatar     { name, src?, size?=32 }
-InkToaster    { }                        // wrap the app; useInkToast() to show
+InkToaster    { offset? }                // wrap the app; useInkToast() to show; offset clears a tab bar
 InkTable      { caption, columns[{key,header,numeric?,render,width?,sortable?,sortValue?}],
                 rows, rowKey, empty?, sort?, onSortChange?, sticky? }
 InkList       { label, empty? }
 InkDialog     { open, onClose, title, description?, actions?, dismissible?=true }
-InkSheet      { open, onClose, title, side?="bottom"|"right"|"left" }
+InkSheet      { open, onClose, title, description?, side?="bottom"|"right"|"left",
+                dismissible?=true, scroll?=true }
 ```
 
 ### Hooks
@@ -333,6 +383,7 @@ useInkTheme(): InkTheme          // never throws; falls back to the default them
 useInkToast(): { show, dismiss } // no-ops without a provider
 useInkBudget(): { spent, max } | null
 usePrefersReducedMotion()  (react)   useReduceMotion()  (native)
+useInkInsets(): { top, right, bottom, left }   (native; what the provider was given)
 ```
 
 ---
