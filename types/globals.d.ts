@@ -15,3 +15,7 @@ declare const console: {
 /** Timers. Present on every JavaScript host this library targets. */
 declare function setTimeout(handler: () => void, timeout?: number): number;
 declare function clearTimeout(handle: number): void;
+
+/** The display-synced clock. React Native has it on every version this targets. */
+declare function requestAnimationFrame(callback: (time: number) => void): number;
+declare function cancelAnimationFrame(handle: number): void;

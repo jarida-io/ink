@@ -106,6 +106,8 @@ declare module "react-native" {
     fontSize?: number;
     fontStyle?: "normal" | "italic";
     fontVariant?: string[];
+    /** Android pads text for accents it may never draw; off, the box is the line. */
+    includeFontPadding?: boolean;
     textDecorationLine?: "none" | "underline" | "line-through" | "underline line-through";
     fontWeight?: number | string;
     letterSpacing?: number;
@@ -142,7 +144,8 @@ declare module "react-native" {
     | "menuitem"
     | "progressbar"
     | "alert"
-    | "summary";
+    | "summary"
+    | "adjustable";
 
   export interface AccessibilityState {
     disabled?: boolean;
@@ -171,6 +174,12 @@ declare module "react-native" {
     importantForAccessibility?: "auto" | "yes" | "no" | "no-hide-descendants";
     /** iOS half of hiding a decorative element. Android uses the line above. */
     accessibilityElementsHidden?: boolean;
+    /** iOS: everything outside this view is hidden from VoiceOver while it shows. */
+    accessibilityViewIsModal?: boolean;
+    /** iOS: the two-finger Z scrub. */
+    onAccessibilityEscape?: () => void;
+    accessibilityActions?: ReadonlyArray<{ name: string; label?: string }>;
+    onAccessibilityAction?: (event: { nativeEvent: { actionName: string } }) => void;
   }
 
   export interface ViewProps extends AccessibilityProps {
@@ -188,6 +197,7 @@ declare module "react-native" {
     children?: ReactNode;
     numberOfLines?: number;
     testID?: string;
+    ref?: Ref<unknown>;
   }
 
   export interface PressableStateCallbackType {
@@ -200,6 +210,7 @@ declare module "react-native" {
     onPressIn?: () => void;
     onPressOut?: () => void;
     onLongPress?: () => void;
+    delayLongPress?: number;
     disabled?: boolean;
     hitSlop?: number | Insets;
     testID?: string;
@@ -223,8 +234,22 @@ declare module "react-native" {
     onFocus?: () => void;
     onBlur?: () => void;
     onSubmitEditing?: () => void;
+    onContentSizeChange?: (event: {
+      nativeEvent: { contentSize: { width: number; height: number } };
+    }) => void;
+    textAlignVertical?: "auto" | "top" | "bottom" | "center";
+    selectionColor?: ColorValue;
+    cursorColor?: ColorValue;
+    returnKeyType?: "done" | "go" | "next" | "search" | "send";
+    secureTextEntry?: boolean;
+    scrollEnabled?: boolean;
+    autoCapitalize?: "none" | "sentences" | "words" | "characters";
+    autoCorrect?: boolean;
+    autoFocus?: boolean;
+    maxLength?: number;
     style?: StyleProp<TextStyle>;
     testID?: string;
+    ref?: Ref<unknown>;
   }
 
   export interface ModalProps {
@@ -232,6 +257,12 @@ declare module "react-native" {
     transparent?: boolean;
     animationType?: "none" | "slide" | "fade";
     onRequestClose?: () => void;
+    onShow?: () => void;
+    /** Android: the scrim reaches under the status bar rather than stopping at it. */
+    statusBarTranslucent?: boolean;
+    /** Android: and under the navigation bar. */
+    navigationBarTranslucent?: boolean;
+    supportedOrientations?: Array<"portrait" | "landscape" | "landscape-left" | "landscape-right">;
     children?: ReactNode;
   }
 
@@ -240,6 +271,9 @@ declare module "react-native" {
     showsHorizontalScrollIndicator?: boolean;
     showsVerticalScrollIndicator?: boolean;
     contentContainerStyle?: StyleProp<ViewStyle>;
+    keyboardShouldPersistTaps?: "always" | "never" | "handled";
+    alwaysBounceVertical?: boolean;
+    contentOffset?: { x: number; y: number };
   }
 
   export interface ImageProps {
@@ -269,12 +303,46 @@ declare module "react-native" {
 
   export const PanResponder: {
     create(config: {
-      onStartShouldSetPanResponder?: () => boolean;
-      onMoveShouldSetPanResponder?: () => boolean;
+      onStartShouldSetPanResponder?: (e: GestureResponderEvent, g: PanResponderGestureState) => boolean;
+      onMoveShouldSetPanResponder?: (e: GestureResponderEvent, g: PanResponderGestureState) => boolean;
       onPanResponderGrant?: (e: GestureResponderEvent, g: PanResponderGestureState) => void;
       onPanResponderMove?: (e: GestureResponderEvent, g: PanResponderGestureState) => void;
       onPanResponderRelease?: (e: GestureResponderEvent, g: PanResponderGestureState) => void;
+      onPanResponderTerminate?: (e: GestureResponderEvent, g: PanResponderGestureState) => void;
+      onPanResponderTerminationRequest?: (
+        e: GestureResponderEvent,
+        g: PanResponderGestureState,
+      ) => boolean;
     }): { panHandlers: Record<string, unknown> };
+  };
+
+  export interface KeyboardEvent {
+    duration?: number;
+    endCoordinates: { height: number; screenY: number; width: number; screenX: number };
+  }
+
+  export const Keyboard: {
+    addListener(
+      event: "keyboardWillShow" | "keyboardDidShow" | "keyboardWillHide" | "keyboardDidHide",
+      handler: (event: KeyboardEvent) => void,
+    ): { remove(): void };
+    dismiss(): void;
+  };
+
+  export function useWindowDimensions(): {
+    width: number;
+    height: number;
+    scale: number;
+    fontScale: number;
+  };
+
+  export function findNodeHandle(component: unknown): number | null;
+
+  export const LayoutAnimation: {
+    configureNext(config: {
+      duration: number;
+      update?: { type: "keyboard" | "easeInEaseOut" | "linear" | "spring" };
+    }): void;
   };
   export const Text: ComponentType<TextProps>;
   export const Pressable: ComponentType<PressableProps>;
@@ -295,25 +363,32 @@ declare module "react-native" {
     interpolate(config: {
       inputRange: number[];
       outputRange: number[] | string[];
+      extrapolate?: "clamp" | "extend" | "identity";
     }): AnimatedInterpolation;
   }
 
   export class AnimatedValue implements AnimatedInterpolation {
     constructor(value: number);
     setValue(value: number): void;
+    stopAnimation(callback?: (value: number) => void): void;
+    addListener(callback: (state: { value: number }) => void): string;
+    removeListener(id: string): void;
     interpolate(config: {
       inputRange: number[];
       outputRange: number[] | string[];
+      extrapolate?: "clamp" | "extend" | "identity";
     }): AnimatedInterpolation;
   }
 
   export interface AnimatedComposite {
-    start(callback?: () => void): void;
+    start(callback?: (result: { finished: boolean }) => void): void;
     stop(): void;
   }
 
   export namespace Animated {
     type WithAnimatedValue<T> = { [K in keyof T]?: T[K] | AnimatedInterpolation };
+    type Value = AnimatedValue;
+    type CompositeAnimation = AnimatedComposite;
   }
 
   // Animated views accept an interpolation anywhere a style takes a number.
@@ -338,6 +413,23 @@ declare module "react-native" {
       },
     ): AnimatedComposite;
     loop(animation: AnimatedComposite, config?: { iterations?: number }): AnimatedComposite;
+    spring(
+      value: AnimatedValue,
+      config: {
+        toValue: number;
+        velocity?: number;
+        stiffness?: number;
+        damping?: number;
+        mass?: number;
+        restDisplacementThreshold?: number;
+        restSpeedThreshold?: number;
+        useNativeDriver: boolean;
+      },
+    ): AnimatedComposite;
+    parallel(animations: AnimatedComposite[]): AnimatedComposite;
+    sequence(animations: AnimatedComposite[]): AnimatedComposite;
+    delay(time: number): AnimatedComposite;
+    add(a: AnimatedInterpolation, b: AnimatedInterpolation): AnimatedInterpolation;
   };
 
   export const Easing: {
@@ -345,11 +437,14 @@ declare module "react-native" {
     linear: (value: number) => number;
     ease: (value: number) => number;
     inOut(easing: (value: number) => number): (value: number) => number;
+    out(easing: (value: number) => number): (value: number) => number;
+    cubic: (value: number) => number;
   };
 
   export const AccessibilityInfo: {
     isReduceMotionEnabled(): Promise<boolean>;
     isReduceTransparencyEnabled(): Promise<boolean>;
+    sendAccessibilityEvent(handle: unknown, event: "focus"): void;
     addEventListener(
       type: "reduceMotionChanged" | "reduceTransparencyChanged",
       handler: (enabled: boolean) => void,

@@ -18,7 +18,13 @@
  * author's simulator and doubles every label on the other OS — a bug that
  * survives review because the reviewer also only ran one platform.
  */
-import { useSyncExternalStore, type ReactElement, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useSyncExternalStore,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 import {
   iconPrimitives,
@@ -65,6 +71,21 @@ export interface InkIconProps {
   style?: StyleProp<ViewStyle>;
 }
 
+/**
+ * `currentColor`, rebuilt. A control that paints its own label publishes that
+ * colour here, so an icon inside a filled button is the label's colour rather
+ * than the page's text colour on a purple face.
+ */
+const IconPaint = createContext<string | null>(null);
+
+export function IconPaintProvider({ value, children }: { value: string; children: ReactNode }) {
+  return <IconPaint.Provider value={value}>{children}</IconPaint.Provider>;
+}
+
+export function useIconPaint(): string | null {
+  return useContext(IconPaint);
+}
+
 function useIconsVersion(): number {
   return useSyncExternalStore(subscribeIcons, iconsVersion, iconsVersion);
 }
@@ -90,7 +111,8 @@ export function InkIcon({
 }: InkIconProps): ReactElement {
   useIconsVersion();
   const theme = useInkTheme();
-  const paint = tone ? toneColors(tone, theme.color).fg : theme.color.text;
+  const inherited = useIconPaint();
+  const paint = tone ? toneColors(tone, theme.color).fg : (inherited ?? theme.color.text);
   const resolution = resolveIcon(name);
   const a11y = accessibility(label);
 

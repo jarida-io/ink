@@ -18,10 +18,28 @@ import { createTheme, type InkTheme, type InkThemeOptions } from "../tokens/them
 
 const ThemeContext = createContext<InkTheme | null>(null);
 
+/** The device's unsafe edges — a notch, a home indicator, a navigation bar. */
+export interface InkInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+const NO_INSETS: InkInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+const InsetsContext = createContext<InkInsets>(NO_INSETS);
+
 const DEFAULT_THEME = createTheme({ hasTrueItalic: false });
 
 export interface InkProviderProps extends InkThemeOptions {
   theme?: InkTheme;
+  /**
+   * Pass `useSafeAreaInsets()` once, here. React Native cannot measure them
+   * itself, and handing them to every sheet, toast and bar is how one of them
+   * ends up under the home indicator.
+   */
+  insets?: Partial<InkInsets>;
   children: ReactNode;
 }
 
@@ -43,7 +61,7 @@ export function useReduceMotion(): boolean {
   return reduced;
 }
 
-export function InkProvider({ theme, children, ...options }: InkProviderProps) {
+export function InkProvider({ theme, insets, children, ...options }: InkProviderProps) {
   const reduced = useReduceMotion();
 
   const resolved = useMemo(
@@ -68,7 +86,23 @@ export function InkProvider({ theme, children, ...options }: InkProviderProps) {
     ],
   );
 
-  return <ThemeContext.Provider value={resolved}>{children}</ThemeContext.Provider>;
+  // A provider nested to restyle one subtree keeps the edges it was given above;
+  // the device did not change shape because a screen chose a darker theme.
+  const inherited = useContext(InsetsContext);
+  const edges = useMemo<InkInsets>(
+    () => (insets ? { ...inherited, ...insets } : inherited),
+    [inherited, insets?.top, insets?.right, insets?.bottom, insets?.left],
+  );
+
+  return (
+    <ThemeContext.Provider value={resolved}>
+      <InsetsContext.Provider value={edges}>{children}</InsetsContext.Provider>
+    </ThemeContext.Provider>
+  );
+}
+
+export function useInkInsets(): InkInsets {
+  return useContext(InsetsContext);
 }
 
 export function useInkTheme(): InkTheme {
