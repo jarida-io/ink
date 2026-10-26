@@ -14,8 +14,8 @@
  */
 export { InkIcon, renderIconSlot } from "./icon.js";
 export type { InkIconProps, InkIconSlot } from "./icon.js";
-export { InkProvider, useInkTheme, useReduceMotion } from "./InkProvider.js";
-export type { InkProviderProps } from "./InkProvider.js";
+export { InkProvider, useInkTheme, useInkInsets, useReduceMotion } from "./InkProvider.js";
+export type { InkProviderProps, InkInsets } from "./InkProvider.js";
 export { InkEdge } from "./InkEdge.js";
 export type { InkEdgeProps } from "./InkEdge.js";
 export { InkTitle, InkEyebrow, InkProse, InkBadge, InkNotice, InkMeter, InkStage } from "./primitives.js";
@@ -99,7 +99,7 @@ export type {
 export { InkBubble, InkBubbleGroup, InkTyping } from "./chat.js";
 export type { InkBubbleProps, InkBubbleMessage, BubblePosition } from "./chat.js";
 export { InkDialog, InkSheet } from "./overlays.js";
-export type { InkDialogProps } from "./overlays.js";
+export type { InkDialogProps, InkSheetProps } from "./overlays.js";
 export {
   InkChip,
   InkText,

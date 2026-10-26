@@ -5,8 +5,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Animated,
-  Easing,
-  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -18,10 +16,19 @@ import {
 } from "react-native";
 import { filterItems, highlight } from "../headless/filter.js";
 import { pageSlots } from "../headless/pagination.js";
+import { edgeStateFor } from "../core/edge.js";
+import { hitSlop } from "../core/reach.js";
 import { toneColors, type InkTone } from "../core/tone.js";
-import { renderIconSlot, type InkIconSlot } from "./icon.js";
-import { useInkTheme } from "./InkProvider.js";
+import { DISABLED_OPACITY, controlPadX } from "../tokens/control.js";
+import { SPRING } from "../tokens/motion.js";
+import { fieldFrame, singleLine } from "./field.js";
+import { Glyph } from "./glyph.js";
+import { IconPaintProvider, renderIconSlot, type InkIconSlot } from "./icon.js";
+import { InkEdge } from "./InkEdge.js";
+import { useInkInsets, useInkTheme } from "./InkProvider.js";
 import { InkAvatar, InkSpinner } from "./feedback.js";
+import { springTo } from "./motion.js";
+import { Overlay } from "./overlay.js";
 import { inkText } from "./type.js";
 
 /* ── Chip ──────────────────────────────────────────────────────────────────
@@ -59,7 +66,9 @@ export function InkChip({
     color: selected ? colours.fg : theme.color.text,
   });
 
+  const [pressed, setPressed] = useState<"body" | "remove" | null>(null);
   const Body = onPress ? Pressable : View;
+  const padX = controlPadX("sm", "pill");
 
   return (
     <View
@@ -67,12 +76,15 @@ export function InkChip({
         {
           flexDirection: "row",
           alignItems: "center",
+          alignSelf: "flex-start",
           minHeight: 32,
           borderWidth: theme.edge.hairlineWidth,
           borderColor: selected ? colours.fg : theme.color.lineStrong,
           borderRadius: theme.radius.pill,
-          backgroundColor: selected ? colours.soft : theme.color.surface,
-          opacity: disabled ? 0.5 : 1,
+          backgroundColor:
+            pressed === "body" ? theme.color.pressed : selected ? colours.soft : theme.color.surface,
+          opacity: disabled ? DISABLED_OPACITY : 1,
+          overflow: "hidden",
         },
         style,
       ]}
@@ -84,18 +96,23 @@ export function InkChip({
               accessibilityState: { selected, disabled },
               disabled,
               onPress,
+              onPressIn: () => setPressed("body"),
+              onPressOut: () => setPressed(null),
+              hitSlop: hitSlop(32, theme.touch.tapMin),
             }
           : {})}
         style={{
           flexDirection: "row",
           alignItems: "center",
           gap: theme.space[2],
-          minHeight: 32,
-          paddingHorizontal: onRemove ? theme.space[4] : theme.space[4],
-          paddingRight: onRemove ? theme.space[1] : theme.space[4],
+          minHeight: 30,
+          paddingLeft: icon ? padX - theme.space[1] : padX,
+          paddingRight: onRemove ? theme.space[1] : padX,
         }}
       >
-        {renderIconSlot(icon, 16)}
+        <IconPaintProvider value={selected ? colours.fg : theme.color.textSecondary}>
+          {renderIconSlot(icon, 16)}
+        </IconPaintProvider>
         <Text style={text.style}>{children}</Text>
       </Body>
 
@@ -105,16 +122,20 @@ export function InkChip({
           accessibilityLabel={label ? `Remove ${label}` : "Remove"}
           disabled={disabled}
           onPress={onRemove}
+          onPressIn={() => setPressed("remove")}
+          onPressOut={() => setPressed(null)}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
           style={{
-            width: theme.space[5],
-            height: theme.space[5],
+            width: 24,
+            height: 24,
             marginRight: theme.space[1],
             alignItems: "center",
             justifyContent: "center",
             borderRadius: theme.radius.pill,
+            backgroundColor: pressed === "remove" ? theme.color.pressed : undefined,
           }}
         >
-          <Text style={inkText(theme, { color: theme.color.textTertiary }).style}>&times;</Text>
+          <Glyph name="x" size={14} paint={theme.color.textSecondary} />
         </Pressable>
       ) : null}
     </View>
@@ -129,6 +150,7 @@ export function InkText({
   tone,
   mono,
   numeric,
+  numberOfLines,
   style,
   children,
 }: {
@@ -138,6 +160,8 @@ export function InkText({
   tone?: "default" | "secondary" | "tertiary";
   mono?: boolean;
   numeric?: boolean;
+  /** Truncate with an ellipsis after this many lines. */
+  numberOfLines?: number;
   style?: StyleProp<TextStyle>;
   children: ReactNode;
 }) {
@@ -155,7 +179,10 @@ export function InkText({
   });
   // `fontVariant` is the native spelling of tabular figures.
   return (
-    <Text style={[resolved.style, numeric ? { fontVariant: ["tabular-nums"] } : null, style]}>
+    <Text
+      numberOfLines={numberOfLines}
+      style={[resolved.style, numeric ? { fontVariant: ["tabular-nums"] } : null, style]}
+    >
       {children}
     </Text>
   );
@@ -183,14 +210,22 @@ export function InkLink({
   const theme = useInkTheme();
   const text = inkText(theme, {
     size: "md",
+    weight: standalone ? theme.weight.semibold : theme.weight.regular,
     color: standalone ? theme.color.text : theme.color.accentLine,
   });
   return (
-    <Pressable accessibilityRole="link" onPress={onPress} style={style}>
-      <Text style={[text.style, standalone ? null : { textDecorationLine: "underline" }]}>
-        {children}
-        {external ? " ↗" : ""}
-      </Text>
+    <Pressable
+      accessibilityRole="link"
+      accessibilityHint={external ? "Opens outside the app" : undefined}
+      onPress={onPress}
+      hitSlop={hitSlop(text.style.lineHeight ?? 22, theme.touch.tapMin)}
+      style={({ pressed }) => [
+        { flexDirection: "row", alignItems: "center", gap: 2, alignSelf: "flex-start", opacity: pressed ? 0.6 : 1 },
+        style,
+      ]}
+    >
+      <Text style={[text.style, standalone ? null : { textDecorationLine: "underline" }]}>{children}</Text>
+      {external ? <Glyph name="arrow-up-right" size={14} paint={text.style.color as string} /> : null}
     </Pressable>
   );
 }
@@ -269,23 +304,35 @@ export function InkListItem({
   const theme = useInkTheme();
   const titleStyle = inkText(theme, { size: "md", weight: theme.weight.semibold });
   const descStyle = inkText(theme, { size: "sm", color: theme.color.textSecondary });
+  const [pressed, setPressed] = useState(false);
   const Row = onPress ? Pressable : View;
 
   return (
     <Row
       {...(onPress
-        ? { accessibilityRole: "button" as const, accessibilityState: { selected, disabled }, disabled, onPress }
+        ? {
+            accessibilityRole: "button" as const,
+            accessibilityState: { selected, disabled },
+            disabled,
+            onPress,
+            onPressIn: () => setPressed(true),
+            onPressOut: () => setPressed(false),
+          }
         : {})}
       style={[
         {
           flexDirection: "row",
           alignItems: "center",
           gap: theme.space[3],
-          minHeight: 52,
+          minHeight: theme.rowHeight.lg,
           paddingVertical: theme.space[3],
           paddingHorizontal: theme.space[4],
-          backgroundColor: selected ? theme.color.accentSoft : "transparent",
-          opacity: disabled ? 0.5 : 1,
+          backgroundColor: pressed
+            ? theme.color.pressed
+            : selected
+              ? theme.color.accentSoft
+              : "transparent",
+          opacity: disabled ? DISABLED_OPACITY : 1,
         },
         style,
       ]}
@@ -336,61 +383,79 @@ export function InkAccordion({
   defaultOpen?: string[];
   style?: StyleProp<ViewStyle>;
 }) {
-  const theme = useInkTheme();
   const [open, setOpen] = useState<string[]>(defaultOpen);
 
   return (
     <View accessibilityLabel={label} style={style}>
-      {items.map((item) => {
-        const isOpen = open.includes(item.key);
-        return (
-          <View key={item.key} style={{ borderBottomWidth: theme.edge.hairlineWidth, borderColor: theme.color.line }}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ expanded: isOpen, disabled: item.disabled }}
-              disabled={item.disabled}
-              onPress={() =>
-                setOpen((current) =>
-                  isOpen
-                    ? current.filter((k) => k !== item.key)
-                    : single
-                      ? [item.key]
-                      : [...current, item.key],
-                )
-              }
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: theme.space[3],
-                minHeight: 52,
-                paddingVertical: theme.space[3],
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                {typeof item.title === "string" ? (
-                  <Text style={inkText(theme, { size: "md", weight: theme.weight.semibold }).style}>
-                    {item.title}
-                  </Text>
-                ) : (
-                  item.title
-                )}
-              </View>
-              {item.meta}
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRightWidth: 2,
-                  borderBottomWidth: 2,
-                  borderColor: theme.color.textSecondary,
-                  transform: [{ rotate: isOpen ? "-135deg" : "45deg" }],
-                }}
-              />
-            </Pressable>
-            {isOpen ? <View style={{ paddingBottom: theme.space[4] }}>{item.content}</View> : null}
-          </View>
-        );
-      })}
+      {items.map((item) => (
+        <AccordionRow
+          key={item.key}
+          item={item}
+          open={open.includes(item.key)}
+          onToggle={(isOpen) =>
+            setOpen((current) =>
+              isOpen ? current.filter((k) => k !== item.key) : single ? [item.key] : [...current, item.key],
+            )
+          }
+        />
+      ))}
+    </View>
+  );
+}
+
+function AccordionRow({
+  item,
+  open,
+  onToggle,
+}: {
+  item: InkAccordionItem;
+  open: boolean;
+  onToggle: (wasOpen: boolean) => void;
+}) {
+  const theme = useInkTheme();
+  const turn = useRef(new Animated.Value(open ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (!theme.animate) {
+      turn.setValue(open ? 1 : 0);
+      return;
+    }
+    const animation = springTo(turn, open ? 1 : 0, { spring: SPRING.snappy, rest: 0.001 });
+    animation.start();
+    return () => animation.stop();
+  }, [open, turn, theme.animate]);
+
+  return (
+    <View style={{ borderBottomWidth: theme.edge.hairlineWidth, borderColor: theme.color.line }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open, disabled: item.disabled }}
+        disabled={item.disabled}
+        onPress={() => onToggle(open)}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: theme.space[3],
+          minHeight: theme.rowHeight.lg,
+          paddingVertical: theme.space[3],
+          opacity: item.disabled ? DISABLED_OPACITY : pressed ? 0.6 : 1,
+        })}
+      >
+        <View style={{ flex: 1 }}>
+          {typeof item.title === "string" ? (
+            <Text style={inkText(theme, { size: "md", weight: theme.weight.semibold }).style}>{item.title}</Text>
+          ) : (
+            item.title
+          )}
+        </View>
+        {item.meta}
+        <Animated.View
+          style={{ transform: [{ rotate: turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] }) }] }}
+        >
+          <Glyph name="chevron-down" size={18} paint={theme.color.textSecondary} />
+        </Animated.View>
+      </Pressable>
+      {open ? <View style={{ paddingBottom: theme.space[4] }}>{item.content}</View> : null}
     </View>
   );
 }
@@ -505,6 +570,7 @@ export function InkSearchField({
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useInkTheme();
+  const [focused, setFocused] = useState(false);
   const field = inkText(theme, { size: "md" });
   return (
     <View
@@ -514,16 +580,14 @@ export function InkSearchField({
           alignItems: "center",
           gap: theme.space[2],
           minHeight: theme.touch.tapMin,
-          paddingHorizontal: theme.space[3],
-          borderWidth: theme.edge.hairlineWidth,
-          borderColor: theme.color.lineStrong,
-          borderRadius: theme.radius.pill,
-          backgroundColor: theme.color.surface,
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? DISABLED_OPACITY : 1,
         },
+        fieldFrame(theme, { focused }, theme.space[3] + 2),
+        { borderRadius: theme.radius.pill },
         style,
       ]}
     >
+      <Glyph name="search" size={18} paint={theme.color.textSecondary} />
       <TextInput
         value={value}
         onChangeText={onChange}
@@ -531,25 +595,34 @@ export function InkSearchField({
         placeholder={placeholder}
         placeholderTextColor={theme.color.textTertiary}
         keyboardType="web-search"
+        returnKeyType="search"
+        autoCapitalize="none"
+        autoCorrect={false}
+        selectionColor={theme.color.accentLine}
+        cursorColor={theme.color.accentLine}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onSubmitEditing={() => onSubmit?.(value)}
         accessibilityLabel={label}
-        style={[field.style, { flex: 1, paddingVertical: theme.space[2] }]}
+        style={[singleLine(field.style), { flex: 1, alignSelf: "stretch" }]}
       />
       {value ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Clear search"
           onPress={() => onChange("")}
-          style={{
-            width: theme.space[5],
-            height: theme.space[5],
+          hitSlop={10}
+          style={({ pressed }) => ({
+            width: 22,
+            height: 22,
+            marginRight: -2,
             alignItems: "center",
             justifyContent: "center",
             borderRadius: theme.radius.pill,
-            backgroundColor: theme.color.line,
-          }}
+            backgroundColor: pressed ? theme.color.lineStrong : theme.color.line,
+          })}
         >
-          <Text style={inkText(theme, { color: theme.color.textSecondary }).style}>&times;</Text>
+          <Glyph name="x" size={14} paint={theme.color.textSecondary} />
         </Pressable>
       ) : null}
     </View>
@@ -622,18 +695,21 @@ export function InkAutocomplete<T>({
               {empty}
             </Text>
           ) : (
-            <ScrollView style={{ maxHeight: 260 }}>
+            // Without "handled" the first tap on a suggestion only dismisses
+            // the keyboard, and the reader has to tap the same row again.
+            <ScrollView style={{ maxHeight: 260 }} keyboardShouldPersistTaps="handled">
               {matches.map((match, i) => (
                 <Pressable
                   key={i}
                   accessibilityRole="button"
                   onPress={() => onSelect(match.item)}
-                  style={{
+                  style={({ pressed }) => ({
                     minHeight: theme.touch.tapMin,
                     justifyContent: "center",
                     paddingHorizontal: theme.space[3],
                     borderRadius: theme.radius.sm,
-                  }}
+                    backgroundColor: pressed ? theme.color.pressed : undefined,
+                  })}
                 >
                   <Text style={inkText(theme, { size: "base" }).style}>
                     {highlight(labelOf(match.item), match.ranges).map((part, j) => (
@@ -687,17 +763,32 @@ export function InkNumberField({
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useInkTheme();
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
   const round = (n: number) => {
     const places = (String(step).split(".")[1] ?? "").length;
     return places ? Number(n.toFixed(places)) : n;
   };
-  const stepStyle: ViewStyle = {
-    width: theme.touch.tapMin,
-    height: theme.touch.tapMin,
-    alignItems: "center",
-    justifyContent: "center",
-  };
+  const stepper = (glyph: "minus" | "plus", name: string, blocked: boolean, next: number) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${name} ${label}`}
+      accessibilityState={{ disabled: blocked }}
+      disabled={blocked}
+      onPress={() => onChange(clamp(round(next)))}
+      style={({ pressed }) => ({
+        width: theme.touch.tapMin,
+        alignSelf: "stretch",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: pressed ? theme.color.pressed : undefined,
+        opacity: blocked && !disabled ? DISABLED_OPACITY : 1,
+      })}
+    >
+      <Glyph name={glyph} size={18} paint={theme.color.text} />
+    </Pressable>
+  );
 
   return (
     <View
@@ -705,50 +796,44 @@ export function InkNumberField({
         {
           flexDirection: "row",
           alignItems: "center",
-          borderWidth: theme.edge.hairlineWidth,
-          borderColor: theme.color.lineStrong,
-          borderRadius: theme.radius.md,
-          backgroundColor: theme.color.surface,
+          minHeight: theme.touch.tapMin,
           overflow: "hidden",
           alignSelf: "flex-start",
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? DISABLED_OPACITY : 1,
         },
+        fieldFrame(theme, { focused }, 0),
         style,
       ]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Decrease ${label}`}
-        disabled={disabled || value <= min}
-        onPress={() => onChange(clamp(round(value - step)))}
-        style={stepStyle}
-      >
-        <Text style={inkText(theme, { size: "lg", color: theme.color.textSecondary }).style}>&minus;</Text>
-      </Pressable>
+      {stepper("minus", "Decrease", Boolean(disabled) || value <= min, value - step)}
+      <View style={{ width: theme.edge.hairlineWidth, alignSelf: "stretch", backgroundColor: theme.color.line }} />
       <TextInput
-        value={String(value)}
+        // A draft while typing, so "1." or an emptied field is not snapped back
+        // to a number under the caret.
+        value={draft ?? String(value)}
         keyboardType="numeric"
         editable={!disabled}
         accessibilityLabel={label}
+        selectionColor={theme.color.accentLine}
+        cursorColor={theme.color.accentLine}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          setDraft(null);
+        }}
         onChangeText={(t) => {
+          setDraft(t);
           const next = Number(t);
-          if (t !== "" && !Number.isNaN(next)) onChange(clamp(next));
+          if (t.trim() !== "" && !Number.isNaN(next)) onChange(clamp(next));
         }}
         style={[
-          inkText(theme, { role: "mono", size: "md" }).style,
-          { minWidth: 48, textAlign: "center" },
+          singleLine(inkText(theme, { role: "mono", size: "md", weight: theme.weight.semibold }).style),
+          { minWidth: 56, alignSelf: "stretch", textAlign: "center", fontVariant: ["tabular-nums"] },
         ]}
       />
-      {suffix}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Increase ${label}`}
-        disabled={disabled || value >= max}
-        onPress={() => onChange(clamp(round(value + step)))}
-        style={stepStyle}
-      >
-        <Text style={inkText(theme, { size: "lg", color: theme.color.textSecondary }).style}>+</Text>
-      </Pressable>
+      {suffix ? <View style={{ paddingRight: theme.space[2] }}>{suffix}</View> : null}
+      <View style={{ width: theme.edge.hairlineWidth, alignSelf: "stretch", backgroundColor: theme.color.line }} />
+      {stepper("plus", "Increase", Boolean(disabled) || value >= max, value + step)}
     </View>
   );
 }
@@ -867,13 +952,14 @@ export function InkPagination({
 }) {
   const theme = useInkTheme();
   const slots = pageSlots(page, count, { max });
-  const cell: ViewStyle = {
+  const cell = (pressed: boolean): ViewStyle => ({
     minWidth: theme.touch.tapMin,
     height: theme.touch.tapMin,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radius.md,
-  };
+    backgroundColor: pressed ? theme.color.pressed : undefined,
+  });
 
   return (
     <View
@@ -883,11 +969,12 @@ export function InkPagination({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Previous page"
+        accessibilityState={{ disabled: page <= 1 }}
         disabled={page <= 1}
         onPress={() => onChange(page - 1)}
-        style={[cell, { opacity: page <= 1 ? 0.3 : 1 }]}
+        style={({ pressed }) => [cell(pressed), { opacity: page <= 1 ? DISABLED_OPACITY : 1 }]}
       >
-        <Text style={inkText(theme, { size: "md", color: theme.color.textSecondary }).style}>&lsaquo;</Text>
+        <Glyph name="chevron-left" size={20} paint={theme.color.text} />
       </Pressable>
 
       {slots.map((slot, i) =>
@@ -902,7 +989,7 @@ export function InkPagination({
             accessibilityLabel={`Page ${slot}`}
             accessibilityState={{ selected: slot === page }}
             onPress={() => onChange(slot)}
-            style={[cell, slot === page ? { backgroundColor: theme.color.accent } : null]}
+            style={({ pressed }) => [cell(pressed), slot === page ? { backgroundColor: theme.color.accent } : null]}
           >
             <Text
               style={[
@@ -923,11 +1010,12 @@ export function InkPagination({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Next page"
+        accessibilityState={{ disabled: page >= count }}
         disabled={page >= count}
         onPress={() => onChange(page + 1)}
-        style={[cell, { opacity: page >= count ? 0.3 : 1 }]}
+        style={({ pressed }) => [cell(pressed), { opacity: page >= count ? DISABLED_OPACITY : 1 }]}
       >
-        <Text style={inkText(theme, { size: "md", color: theme.color.textSecondary }).style}>&rsaquo;</Text>
+        <Glyph name="chevron-right" size={20} paint={theme.color.text} />
       </Pressable>
     </View>
   );
@@ -997,23 +1085,22 @@ export function InkStepper({
                   state === "done" ? theme.color.edge : state === "current" ? theme.color.accent : theme.color.surface,
               }}
             >
-              <Text
-                style={
-                  inkText(theme, {
-                    role: "mono",
-                    size: "sm",
-                    weight: theme.weight.bold,
-                    color:
-                      state === "done"
-                        ? theme.color.surface
-                        : state === "current"
-                          ? theme.color.textOnAccent
-                          : theme.color.textSecondary,
-                  }).style
-                }
-              >
-                {state === "done" ? "✓" : String(i + 1)}
-              </Text>
+              {state === "done" ? (
+                <Glyph name="check" size={16} paint={theme.color.surface} />
+              ) : (
+                <Text
+                  style={
+                    inkText(theme, {
+                      role: "mono",
+                      size: "sm",
+                      weight: theme.weight.bold,
+                      color: state === "current" ? theme.color.textOnAccent : theme.color.textSecondary,
+                    }).style
+                  }
+                >
+                  {String(i + 1)}
+                </Text>
+              )}
             </View>
             <View style={{ flexShrink: 1, gap: 2, alignItems: horizontal ? "center" : "flex-start" }}>
               <Text
@@ -1065,10 +1152,16 @@ export function InkFab({
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useInkTheme();
+  const insets = useInkInsets();
+  const [pressed, setPressed] = useState(false);
   const fixed: ViewStyle =
     position === "static"
-      ? {}
-      : { position: "absolute", bottom: theme.space[6], [position === "bottom-end" ? "right" : "left"]: theme.space[6] };
+      ? { alignSelf: "flex-start" }
+      : {
+          position: "absolute",
+          bottom: insets.bottom + theme.space[5],
+          [position === "bottom-end" ? "right" : "left"]: theme.space[5],
+        };
 
   return (
     <Pressable
@@ -1077,8 +1170,15 @@ export function InkFab({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={[
-        {
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[fixed, style, disabled ? { opacity: DISABLED_OPACITY } : null]}
+    >
+      <InkEdge
+        radius={theme.radius.pill}
+        edge={theme.edgeCompact}
+        state={edgeStateFor("native", { pressed: pressed && !disabled })}
+        contentStyle={{
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
@@ -1086,31 +1186,26 @@ export function InkFab({
           width: extended ? undefined : 56,
           height: 56,
           paddingHorizontal: extended ? theme.space[5] : 0,
-          borderWidth: theme.edge.borderWidth,
-          borderColor: theme.color.edge,
-          borderRadius: theme.radius.pill,
-          backgroundColor: theme.color.accent,
-          opacity: disabled ? 0.5 : 1,
-        },
-        fixed,
-        style,
-      ]}
-    >
-      {renderIconSlot(icon, 24) ?? (
-        <Text style={inkText(theme, { size: "xl", weight: theme.weight.bold, color: theme.color.textOnAccent }).style}>
-          +
-        </Text>
-      )}
-      {extended ? (
-        <Text style={inkText(theme, { size: "md", weight: theme.weight.bold, color: theme.color.textOnAccent }).style}>
-          {label}
-        </Text>
-      ) : null}
+          backgroundColor: pressed ? theme.color.accentPressed : theme.color.accent,
+        }}
+      >
+        <IconPaintProvider value={theme.color.textOnAccent}>
+          {renderIconSlot(icon, 24) ?? <Glyph name="plus" size={24} />}
+          {extended ? (
+            <Text style={inkText(theme, { size: "md", weight: theme.weight.bold, color: theme.color.textOnAccent }).style}>
+              {label}
+            </Text>
+          ) : null}
+        </IconPaintProvider>
+      </InkEdge>
     </Pressable>
   );
 }
 
-/* ── Speed dial ────────────────────────────────────────────────────────── */
+/* ── Speed dial ────────────────────────────────────────────────────────────
+ * Only the mark turns, plus into close. Turning the whole button would spin
+ * its plate with it, and the plate is the one thing that never moves.
+ */
 
 export function InkSpeedDial({
   label,
@@ -1126,6 +1221,7 @@ export function InkSpeedDial({
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useInkTheme();
+  const insets = useInkInsets();
   const [open, setOpen] = useState(false);
   const spin = useRef(new Animated.Value(0)).current;
 
@@ -1134,33 +1230,46 @@ export function InkSpeedDial({
       spin.setValue(open ? 1 : 0);
       return;
     }
-    Animated.timing(spin, {
-      toValue: open ? 1 : 0,
-      duration: theme.duration.base,
-      easing: Easing.bezier(...theme.easing),
-      useNativeDriver: true,
-    }).start();
-  }, [open, spin, theme.animate, theme.duration.base, theme.easing]);
+    const animation = springTo(spin, open ? 1 : 0, { rest: 0.001 });
+    animation.start();
+    return () => animation.stop();
+  }, [open, spin, theme.animate]);
 
+  const end = position !== "bottom-start";
   const fixed: ViewStyle =
     position === "static"
       ? {}
-      : { position: "absolute", bottom: theme.space[6], [position === "bottom-end" ? "right" : "left"]: theme.space[6] };
+      : {
+          position: "absolute",
+          bottom: insets.bottom + theme.space[5],
+          [end ? "right" : "left"]: theme.space[5],
+        };
 
   return (
-    <View style={[{ alignItems: "flex-end", gap: theme.space[3] }, fixed, style]}>
+    <View style={[{ alignItems: end ? "flex-end" : "flex-start", gap: theme.space[3] }, fixed, style]}>
       {open ? (
-        <View accessibilityRole="menu" accessibilityLabel={label} style={{ alignItems: "flex-end", gap: theme.space[2] }}>
+        <View
+          accessibilityRole="menu"
+          accessibilityLabel={label}
+          style={{ alignItems: end ? "flex-end" : "flex-start", gap: theme.space[2] }}
+        >
           {actions.map((action) => (
             <Pressable
               key={action.key}
               accessibilityRole="menuitem"
               accessibilityLabel={action.label}
               onPress={() => {
-                action.onPress?.();
                 setOpen(false);
+                action.onPress?.();
               }}
-              style={{ flexDirection: "row", alignItems: "center", gap: theme.space[3] }}
+              style={({ pressed }) => ({
+                flexDirection: end ? "row" : "row-reverse",
+                alignItems: "center",
+                gap: theme.space[3],
+                // Lined up on the fab's centre, not its leading edge.
+                marginHorizontal: (56 - theme.touch.tapMin) / 2,
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
               <View
                 style={{
@@ -1188,20 +1297,25 @@ export function InkSpeedDial({
                   backgroundColor: theme.color.surface,
                 }}
               >
-                {renderIconSlot(action.icon)}
+                {renderIconSlot(action.icon, 20)}
               </View>
             </Pressable>
           ))}
         </View>
       ) : null}
 
-      <Animated.View
-        style={{
-          transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] }) }],
-        }}
-      >
-        <InkFab label={label} icon={icon} position="static" onPress={() => setOpen((o) => !o)} />
-      </Animated.View>
+      <InkFab
+        label={label}
+        position="static"
+        onPress={() => setOpen((o) => !o)}
+        icon={
+          <Animated.View
+            style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] }) }] }}
+          >
+            {renderIconSlot(icon, 24) ?? <Glyph name="plus" size={24} />}
+          </Animated.View>
+        }
+      />
     </View>
   );
 }
@@ -1229,58 +1343,64 @@ export function InkDrawer({
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useInkTheme();
+  const insets = useInkInsets();
   const bottom = side === "bottom";
   const full = size === "full";
+  const radius = full ? 0 : theme.radius["2xl"];
 
   return (
-    <Modal
-      visible={open}
-      transparent
-      animationType={theme.animate ? (bottom ? "slide" : "fade") : "none"}
-      onRequestClose={onClose}
-    >
-      <Pressable
-        accessibilityLabel={`Close ${label}`}
-        onPress={onClose}
-        style={{
-          flex: 1,
-          flexDirection: bottom ? "column" : "row",
-          justifyContent: bottom ? "flex-end" : side === "end" ? "flex-end" : "flex-start",
-          backgroundColor: "rgba(23, 22, 22, 0.42)",
-        }}
-      >
-        <Pressable onPress={() => {}}>
-          <View
-            accessibilityLabel={label}
-            style={[
-              {
-                width: full ? "100%" : bottom ? "100%" : 340,
-                height: bottom ? undefined : "100%",
-                maxHeight: bottom ? "86%" : undefined,
-                gap: theme.space[4],
-                padding: theme.space[6],
-                borderWidth: full ? 0 : theme.edge.borderWidth,
-                borderColor: theme.color.edge,
-                backgroundColor: theme.color.surface,
-                borderTopLeftRadius: bottom || side === "end" ? theme.radius["2xl"] : 0,
-                borderTopRightRadius: bottom || side === "start" ? theme.radius["2xl"] : 0,
-                borderBottomLeftRadius: side === "end" ? theme.radius["2xl"] : 0,
-                borderBottomRightRadius: side === "start" ? theme.radius["2xl"] : 0,
-              },
-              style,
-            ]}
-          >
-            {children}
+    <Overlay
+      open={open}
+      onDismiss={onClose}
+      placement={bottom ? "bottom" : side === "end" ? "end" : "start"}
+      draggable={bottom}
+      header={
+        bottom ? (
+          <View style={{ paddingTop: theme.space[2], paddingBottom: theme.space[3] }}>
+            <View
+              style={{
+                alignSelf: "center",
+                width: 36,
+                height: 5,
+                borderRadius: theme.radius.pill,
+                backgroundColor: theme.color.textDisabled,
+              }}
+            />
           </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        ) : undefined
+      }
+      panelStyle={[
+        {
+          width: bottom ? undefined : full ? "100%" : 340,
+          maxWidth: full ? "100%" : undefined,
+          paddingHorizontal: theme.space[5],
+          paddingTop: bottom ? 0 : insets.top + theme.space[5],
+          paddingBottom: bottom ? undefined : insets.bottom + theme.space[5],
+          borderWidth: full ? 0 : theme.edge.borderWidth,
+          borderColor: theme.color.edge,
+          backgroundColor: theme.color.surface,
+          borderTopLeftRadius: bottom || side === "end" ? radius : 0,
+          borderTopRightRadius: bottom || side === "start" ? radius : 0,
+          borderBottomLeftRadius: side === "end" ? radius : 0,
+          borderBottomRightRadius: side === "start" ? radius : 0,
+          borderBottomWidth: bottom || full ? 0 : theme.edge.borderWidth,
+          borderLeftWidth: side === "start" || full ? 0 : theme.edge.borderWidth,
+          borderRightWidth: side === "end" || full ? 0 : theme.edge.borderWidth,
+        },
+        style,
+      ]}
+    >
+      <View accessibilityLabel={label} style={{ gap: theme.space[4], flexShrink: 1 }}>
+        {children}
+      </View>
+    </Overlay>
   );
 }
 
 /* ── Backdrop ──────────────────────────────────────────────────────────────
  * Rare on purpose: it says "you can do nothing until this finishes", which is
- * true far less often than it is used.
+ * true far less often than it is used. The words sit on a card rather than on
+ * the scrim, where white measured 2.8:1 over a light page.
  */
 
 export function InkBackdrop({
@@ -1296,22 +1416,33 @@ export function InkBackdrop({
 }) {
   const theme = useInkTheme();
   return (
-    <Modal visible={open} transparent animationType={theme.animate ? "fade" : "none"} onRequestClose={onPress}>
-      <Pressable
+    <Overlay
+      open={open}
+      onDismiss={onPress}
+      placement="center"
+      panelStyle={{ width: "auto", maxWidth: 320, alignSelf: "center" }}
+    >
+      <View
         accessibilityRole="alert"
         accessibilityLabel={label}
         accessibilityState={{ busy: true }}
-        onPress={onPress}
-        style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(23, 22, 22, 0.55)" }}
+        style={{
+          alignItems: "center",
+          gap: theme.space[3],
+          paddingVertical: theme.space[5],
+          paddingHorizontal: theme.space[6],
+          borderWidth: theme.edge.borderWidth,
+          borderColor: theme.color.edge,
+          borderRadius: theme.radius.lg,
+          backgroundColor: theme.color.surface,
+        }}
       >
-        <View style={{ alignItems: "center", gap: theme.space[3] }}>
-          {children ?? <InkSpinner label={label} size={28} />}
-          <Text style={inkText(theme, { size: "md", weight: theme.weight.semibold, color: "#FFFFFF" }).style}>
-            {label}
-          </Text>
-        </View>
-      </Pressable>
-    </Modal>
+        {children ?? <InkSpinner label="" size={28} />}
+        <Text style={[inkText(theme, { size: "md", weight: theme.weight.semibold }).style, { textAlign: "center" }]}>
+          {label}
+        </Text>
+      </View>
+    </Overlay>
   );
 }
 
@@ -1336,6 +1467,7 @@ export function InkAvatarGroup({
   const theme = useInkTheme();
   const shown = people.slice(0, max);
   const rest = people.length - shown.length;
+  const ring = theme.edge.borderWidth;
 
   return (
     <View
@@ -1343,30 +1475,43 @@ export function InkAvatarGroup({
       style={[{ flexDirection: "row", alignItems: "center" }, style]}
     >
       {shown.map((person, i) => (
-        <View key={person.name} style={{ marginLeft: i === 0 ? 0 : -Math.round(size * 0.3) }}>
+        // A ring in the page colour, so overlapping faces read as a stack
+        // rather than as one shape with a bite out of it.
+        <View
+          key={person.name}
+          style={{
+            marginLeft: i === 0 ? 0 : -Math.round(size * 0.28),
+            borderWidth: ring,
+            borderColor: theme.color.surface,
+            borderRadius: (size + ring * 2) / 2,
+          }}
+        >
           <InkAvatar name={person.name} src={person.src} size={size} />
         </View>
       ))}
       {rest > 0 ? (
         <View
           style={{
-            marginLeft: -Math.round(size * 0.3),
-            width: size,
-            height: size,
-            borderRadius: size / 2,
+            marginLeft: -Math.round(size * 0.28),
+            width: size + ring * 2,
+            height: size + ring * 2,
+            borderRadius: (size + ring * 2) / 2,
+            borderWidth: ring,
+            borderColor: theme.color.surface,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: theme.color.line,
+            backgroundColor: theme.color.neutralSoft,
           }}
         >
           <Text
-            style={
+            style={[
               inkText(theme, {
                 role: "mono",
                 weight: theme.weight.bold,
                 color: theme.color.textSecondary,
-              }).style
-            }
+              }).style,
+              { fontSize: Math.round(size * 0.34), lineHeight: Math.round(size * 0.42) },
+            ]}
           >
             +{rest}
           </Text>

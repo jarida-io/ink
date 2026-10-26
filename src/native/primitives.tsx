@@ -1,9 +1,10 @@
 /**
  * The quiet half, on native. Same names and same props as the web renderer.
  */
-import type { ReactNode } from "react";
-import { Text, View, type StyleProp, type TextStyle } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Animated, Easing, Text, View, type StyleProp, type TextStyle } from "react-native";
 import { toneColors, type InkTone } from "../core/tone.js";
+import { IconPaintProvider, renderIconSlot, type InkIconSlot } from "./icon.js";
 import { useInkTheme } from "./InkProvider.js";
 import { inkText, slantTransform } from "./type.js";
 
@@ -82,10 +83,11 @@ export function InkProse({ children }: { children: ReactNode }) {
 
 export interface InkBadgeProps {
   tone?: InkTone;
+  icon?: InkIconSlot;
   children: ReactNode;
 }
 
-export function InkBadge({ tone = "neutral", children }: InkBadgeProps) {
+export function InkBadge({ tone = "neutral", icon, children }: InkBadgeProps) {
   const theme = useInkTheme();
   const colors = toneColors(tone, theme.color);
   const { style } = inkText(theme, {
@@ -101,12 +103,16 @@ export function InkBadge({ tone = "neutral", children }: InkBadgeProps) {
     <View
       style={{
         alignSelf: "flex-start",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: theme.space[1],
         paddingVertical: 2,
         paddingHorizontal: theme.space[2],
         borderRadius: theme.radius.pill,
         backgroundColor: colors.soft,
       }}
     >
+      <IconPaintProvider value={colors.fg}>{renderIconSlot(icon, 12)}</IconPaintProvider>
       <Text style={style}>{children}</Text>
     </View>
   );
@@ -120,13 +126,16 @@ export function InkBadge({ tone = "neutral", children }: InkBadgeProps) {
 
 export interface InkNoticeProps {
   tone?: InkTone;
+  icon?: InkIconSlot;
+  /** Anything that acts on the notice — a retry, a link. Sits under the words. */
+  action?: ReactNode;
   children: ReactNode;
 }
 
-export function InkNotice({ tone = "neutral", children }: InkNoticeProps) {
+export function InkNotice({ tone = "neutral", icon, action, children }: InkNoticeProps) {
   const theme = useInkTheme();
   const colors = toneColors(tone, theme.color);
-  const { style } = inkText(theme, { size: "sm", color: colors.fg });
+  const { style } = inkText(theme, { size: "sm", leading: "base", color: colors.fg });
   const assertive = tone === "danger";
 
   return (
@@ -134,15 +143,25 @@ export function InkNotice({ tone = "neutral", children }: InkNoticeProps) {
       accessibilityRole={assertive ? "alert" : undefined}
       accessibilityLiveRegion={assertive ? "assertive" : "polite"}
       style={{
-        paddingVertical: theme.space[2],
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: theme.space[2],
+        paddingVertical: theme.space[3],
         paddingHorizontal: theme.space[3],
         borderWidth: theme.edge.hairlineWidth,
         borderColor: colors.fg,
-        borderRadius: theme.radius.sm,
+        borderRadius: theme.radius.md,
         backgroundColor: colors.soft,
       }}
     >
-      <Text style={style}>{children}</Text>
+      {icon ? (
+        // Optically on the first line: an 18px glyph against an 18px line.
+        <IconPaintProvider value={colors.fg}>{renderIconSlot(icon, 18)}</IconPaintProvider>
+      ) : null}
+      <View style={{ flex: 1, gap: theme.space[2] }}>
+        <Text style={style}>{children}</Text>
+        {action ? <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.space[2] }}>{action}</View> : null}
+      </View>
     </View>
   );
 }
@@ -164,6 +183,24 @@ export function InkMeter({ value, label }: InkMeterProps) {
   const theme = useInkTheme();
   const indeterminate = value === undefined || Number.isNaN(value);
   const clamped = indeterminate ? 0 : Math.min(1, Math.max(0, value));
+  const [width, setWidth] = useState(0);
+  const pace = useRef(new Animated.Value(0)).current;
+
+  // Unknown totals pace rather than sit at a third, which read as a stall.
+  useEffect(() => {
+    if (!indeterminate || width === 0) return;
+    pace.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(pace, {
+        toValue: 1,
+        duration: theme.animate ? 1400 : 4200,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [indeterminate, width, pace, theme.animate]);
 
   return (
     <View
@@ -173,22 +210,31 @@ export function InkMeter({ value, label }: InkMeterProps) {
       accessibilityValue={
         indeterminate ? undefined : { min: 0, max: 100, now: Math.round(clamped * 100) }
       }
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       style={{
         height: 6,
         borderRadius: theme.radius.pill,
         backgroundColor: theme.color.line,
         borderWidth: theme.edge.hairlineWidth,
-        borderColor: theme.color.edge,
+        borderColor: theme.color.lineStrong,
         overflow: "hidden",
       }}
     >
-      <View
-        style={{
-          height: "100%",
-          width: indeterminate ? "35%" : `${clamped * 100}%`,
-          backgroundColor: theme.color.accent,
-        }}
-      />
+      {indeterminate ? (
+        <Animated.View
+          style={{
+            height: "100%",
+            width: width * 0.35,
+            borderRadius: theme.radius.pill,
+            backgroundColor: theme.color.accent,
+            transform: [
+              { translateX: pace.interpolate({ inputRange: [0, 1], outputRange: [-width * 0.35, width] }) },
+            ],
+          }}
+        />
+      ) : (
+        <View style={{ height: "100%", width: `${clamped * 100}%`, backgroundColor: theme.color.accent }} />
+      )}
     </View>
   );
 }

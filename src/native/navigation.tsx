@@ -5,8 +5,9 @@
  * says — are in `@jarida/ink/headless`, so a bar on a phone and a bar in a
  * browser cap at the same number and drop their labels at the same width.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import {
+  AccessibilityInfo,
   Animated,
   Easing,
   Pressable,
@@ -19,9 +20,10 @@ import {
 } from "react-native";
 import { stageHasMaterial, type NavbarStage } from "../headless/navbar.js";
 import { BAR_MAX, badgeText, fitBar, shapeFor, type NavDestination, type NavShape } from "../headless/nav.js";
+import { DISABLED_OPACITY } from "../tokens/control.js";
 import { glassLift, glassSurface } from "../tokens/glass.js";
-import { useInkTheme } from "./InkProvider.js";
-import { renderIconSlot, type InkIconSlot } from "./icon.js";
+import { useInkInsets, useInkTheme } from "./InkProvider.js";
+import { IconPaintProvider, renderIconSlot, type InkIconSlot } from "./icon.js";
 import { inkText } from "./type.js";
 
 export interface InkNavDestination extends NavDestination {
@@ -111,6 +113,16 @@ export interface InkBottomBarProps extends CommonProps {
   collapse?: boolean;
   /** Pass from your list's `onScroll`; there is no window to watch here. */
   stage?: NavbarStage;
+  /** Told when the contracted bar is pressed, in place of expanding itself. */
+  onExpand?: () => void;
+  /** `BlurView` from `expo-blur`, if the app has it. The same slot as the navbar's. */
+  blurComponent?: ComponentType<{
+    intensity?: number;
+    /** Only ever "light" or "dark", so expo-blur's own union accepts it. */
+    tint?: "light" | "dark";
+    style?: StyleProp<ViewStyle>;
+    children?: ReactNode;
+  }>;
 }
 
 export function InkBottomBar({
@@ -121,21 +133,44 @@ export function InkBottomBar({
   moreLabel = "More",
   moreIcon,
   onMore,
-  bottomInset = 0,
+  bottomInset: givenInset,
   variant = "floating",
   material = "auto",
   collapse = false,
   stage: forced,
+  onExpand,
+  blurComponent: Blur,
   style,
 }: InkBottomBarProps) {
   const theme = useInkTheme();
+  // The provider's inset unless the caller knows better, so a bar placed
+  // under the home indicator clears it without being told.
+  const insets = useInkInsets();
+  const bottomInset = givenInset ?? insets.bottom;
   const glass = glassSurface(theme);
   const [width, setWidth] = useState(0);
   const [pushed, setPushed] = useState<NavbarStage | null>(null);
   const stage = pushed ?? forced ?? "expanded";
+  // A press on the puck asks for the bar back; it does not ask for the bar to
+  // stop answering the scroll. Without this the push outlives the stage that
+  // provoked it and `collapse` works exactly once.
+  useEffect(() => setPushed(null), [forced]);
   const hasMaterial =
     material === "always" ? true : material === "never" ? false : stageHasMaterial(stage);
   const collapsed = stage === "collapsed";
+  const [reduceTransparency, setReduceTransparency] = useState(false);
+  useEffect(() => {
+    let live = true;
+    AccessibilityInfo.isReduceTransparencyEnabled?.().then((v) => live && setReduceTransparency(v));
+    const sub = AccessibilityInfo.addEventListener("reduceTransparencyChanged", setReduceTransparency);
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+  // The blur sits behind the content rather than around it, so the shell keeps
+  // its padding, its morph and its puck; the tint rides on the blur.
+  const blurred = Boolean(Blur) && hasMaterial && !reduceTransparency;
   const current = items.find((i) => i.key === value);
   const layout = fitBar(items, width);
   const inOverflow = layout.overflow.some((i) => i.key === value);
@@ -183,15 +218,17 @@ export function InkBottomBar({
         accessibilityState={{ selected, disabled: item.disabled }}
         disabled={item.disabled}
         onPress={onPress}
-        style={{
+        style={({ pressed }) => ({
           flex: 1,
           minHeight: theme.touch.tapMin,
           alignItems: "center",
           justifyContent: "center",
           gap: theme.space[1],
           paddingVertical: theme.space[1],
-          opacity: item.disabled ? 0.45 : 1,
-        }}
+          borderRadius: theme.radius.lg,
+          backgroundColor: pressed ? theme.color.pressed : undefined,
+          opacity: item.disabled ? DISABLED_OPACITY : 1,
+        })}
       >
         {/* The mark, above the icon where a thumb is not covering it. Selection
             is never carried by colour alone. */}
@@ -207,7 +244,7 @@ export function InkBottomBar({
           }}
         />
         <View>
-          {renderIconSlot(item.icon, 24)}
+          <IconPaintProvider value={text.style.color as string}>{renderIconSlot(item.icon, 24)}</IconPaintProvider>
           <Badge badge={item.badge} />
         </View>
         {layout.iconsOnly ? null : (
@@ -237,11 +274,22 @@ export function InkBottomBar({
           ...(floating && hasMaterial ? glassLift(theme) : null),
           marginHorizontal: floating ? theme.space[4] : 0,
           marginBottom: floating ? Math.max(theme.space[3], bottomInset) : 0,
-          backgroundColor: hasMaterial ? glass.background : "transparent",
+          backgroundColor: !hasMaterial || blurred
+            ? "transparent"
+            : reduceTransparency
+              ? glass.solid
+              : glass.background,
         },
         style,
       ]}
     >
+      {blurred && Blur ? (
+        <Blur
+          intensity={60}
+          tint={theme.scheme === "dark" ? "dark" : "light"}
+          style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: glass.background }}
+        />
+      ) : null}
       <Animated.View
         style={{ flexDirection: "row", gap: theme.space[1], opacity: bodyOpacity }}
         pointerEvents={collapsed ? "none" : "auto"}
@@ -274,7 +322,7 @@ export function InkBottomBar({
             // navigating. The reader contracted it by scrolling.
             accessibilityLabel="Show navigation"
             accessibilityState={{ expanded: !collapsed }}
-            onPress={() => setPushed("expanded")}
+            onPress={() => (onExpand ? onExpand() : setPushed("expanded"))}
             style={{
               width: theme.touch.tapMin,
               height: theme.touch.tapMin,
@@ -402,7 +450,7 @@ export function InkSidebar({
                   accessibilityState={{ selected, disabled: item.disabled }}
                   disabled={item.disabled}
                   onPress={() => onChange(item.key)}
-                  style={{
+                  style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: rail ? "center" : "flex-start",
@@ -411,9 +459,13 @@ export function InkSidebar({
                     width: rail ? theme.touch.tapMin : undefined,
                     paddingHorizontal: rail ? 0 : theme.space[3],
                     borderRadius: theme.radius.md,
-                    backgroundColor: selected ? theme.color.accentSoft : "transparent",
-                    opacity: item.disabled ? 0.45 : 1,
-                  }}
+                    backgroundColor: selected
+                      ? theme.color.accentSoft
+                      : pressed
+                        ? theme.color.pressed
+                        : "transparent",
+                    opacity: item.disabled ? DISABLED_OPACITY : 1,
+                  })}
                 >
                   <View
                     style={{
@@ -427,7 +479,9 @@ export function InkSidebar({
                     }}
                   />
                   <View>
-                    {renderIconSlot(item.icon)}
+                    <IconPaintProvider value={text.style.color as string}>
+                      {renderIconSlot(item.icon)}
+                    </IconPaintProvider>
                     {/* On a rail the badge sits on the glyph, because that is
                         all there is. With a label it goes to the end of the
                         row — on the glyph it prints through the first word. */}

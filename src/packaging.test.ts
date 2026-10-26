@@ -84,7 +84,9 @@ describe("what ships", () => {
 
     // Each platform is allowed exactly what the other genuinely cannot have.
     const webOnly = ["usePrefersReducedMotion"];
-    const nativeOnly = ["useReduceMotion", "InkEdge", "inkText", "slantTransform"];
+    // `useInkInsets`: the web reads safe areas from CSS `env()`; React Native
+    // cannot measure them at all, so the app hands them in once.
+    const nativeOnly = ["useReduceMotion", "useInkInsets", "InkEdge", "inkText", "slantTransform"];
 
     const missingFromNative = [...web].filter((n) => !native.has(n) && !webOnly.includes(n));
     const missingFromWeb = [...native].filter((n) => !web.has(n) && !nativeOnly.includes(n));

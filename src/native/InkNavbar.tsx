@@ -168,13 +168,15 @@ export function InkNavbar({
           accessibilityRole="button"
           accessibilityLabel={action.label}
           onPress={action.onPress}
-          style={{
+          style={({ pressed }) => ({
             minWidth: metrics.height,
             minHeight: metrics.height,
             alignItems: "center",
             justifyContent: "center",
             paddingHorizontal: theme.space[2],
-          }}
+            borderRadius: theme.radius.pill,
+            backgroundColor: pressed ? theme.color.pressed : undefined,
+          })}
         >
           {renderIconSlot(action.icon) ?? <Text style={inkText(theme, { weight: theme.weight.semibold }).style}>{action.label}</Text>}
         </Pressable>
@@ -206,7 +208,7 @@ export function InkNavbar({
             accessibilityLabel="Show navigation"
             accessibilityState={{ expanded: stage !== "collapsed" }}
             onPress={() => setStage("expanded")}
-            style={{
+            style={({ pressed }) => ({
               width: metrics.height,
               height: metrics.height,
               alignItems: "center",
@@ -215,7 +217,8 @@ export function InkNavbar({
               borderColor: theme.color.edge,
               borderRadius: theme.radius.pill,
               backgroundColor: theme.color.surface,
-            }}
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            })}
           >
             {renderIconSlot(primary?.icon) ?? <PuckMark colour={theme.color.text} />}
           </Pressable>

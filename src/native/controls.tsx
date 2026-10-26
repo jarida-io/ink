@@ -9,14 +9,24 @@
  *   vertical only — see `core/reach.ts`, where the sentence that describes the
  *   web behaviour turned out to describe this one exactly.
  */
-import { useState, type ReactNode } from "react";
-import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Animated, Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { edgeStateFor } from "../core/edge.js";
-import { renderIconSlot, type InkIconSlot } from "./icon.js";
-import { useEdgeBudget } from "../shared/budget.js";
 import { hitSlop } from "../core/reach.js";
+import { useEdgeBudget } from "../shared/budget.js";
+import {
+  DISABLED_OPACITY,
+  controlIconSize,
+  controlMetrics,
+  controlPadX,
+  type ControlSize,
+} from "../tokens/control.js";
+import { SPRING } from "../tokens/motion.js";
+import { InkSpinner } from "./feedback.js";
+import { IconPaintProvider, renderIconSlot, type InkIconSlot } from "./icon.js";
 import { InkEdge } from "./InkEdge.js";
 import { useInkTheme } from "./InkProvider.js";
+import { springTo } from "./motion.js";
 import { inkText } from "./type.js";
 
 /* ── Button ────────────────────────────────────────────────────────────────
@@ -24,14 +34,25 @@ import { inkText } from "./type.js";
  * `primary` is the control that is actually asking a question, and a screen
  * gets about one. `danger` is a primary that happens to be destructive, not a
  * third emphasis level.
+ *
+ * Every variant's face is the control height, so a quiet Cancel beside a
+ * primary Save lines up edge for edge; the plate is the only difference.
  */
 
 export type InkButtonVariant = "primary" | "quiet" | "danger";
 
 export interface InkButtonProps {
   variant?: InkButtonVariant;
+  /** `md` is the touch floor. `sm` keeps the floor through invisible reach. */
+  size?: ControlSize;
   onPress?: () => void;
   disabled?: boolean;
+  /**
+   * The press has been answered and the work is under way. The label stays —
+   * a button that swaps its words for a spinner has stopped saying what it is
+   * doing — and further presses are refused.
+   */
+  loading?: boolean;
   block?: boolean;
   icon?: InkIconSlot;
   style?: StyleProp<ViewStyle>;
@@ -40,8 +61,10 @@ export interface InkButtonProps {
 
 export function InkButton({
   variant = "quiet",
+  size = "md",
   onPress,
   disabled,
+  loading = false,
   block,
   icon,
   style,
@@ -50,57 +73,79 @@ export function InkButton({
   const theme = useInkTheme();
   const [pressed, setPressed] = useState(false);
   const raised = variant !== "quiet";
+  const metrics = controlMetrics(size);
+  const inert = Boolean(disabled || loading);
+  const down = pressed && !inert;
 
   const fill =
     variant === "primary"
-      ? theme.color.accent
+      ? down
+        ? theme.color.accentPressed
+        : theme.color.accent
       : variant === "danger"
-        ? theme.color.danger
+        ? theme.color.dangerFill
         : theme.color.surface;
+  const ink =
+    variant === "primary"
+      ? theme.color.textOnAccent
+      : variant === "danger"
+        ? theme.color.textOnDanger
+        : theme.color.text;
+  const border = raised ? theme.edge.borderWidth : theme.edge.hairlineWidth;
   const label = inkText(theme, {
-    size: "md",
+    size: size === "sm" ? "base" : size === "lg" ? "lg" : "md",
     weight: theme.weight.bold,
     tracking: "snug",
-    color: raised ? theme.color.textOnAccent : theme.color.text,
+    leading: "snug",
+    color: ink,
   });
-
-  const body = (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: theme.space[2],
-        minHeight: theme.touch.tapMin - (raised ? theme.edge.rest : 0),
-        paddingHorizontal: theme.space[5],
-        backgroundColor: fill,
-      }}
-    >
-      {renderIconSlot(icon)}
-      <Text style={label.style}>{children}</Text>
-    </View>
-  );
+  const iconSize = controlIconSize(size);
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: inert, busy: loading }}
+      disabled={inert}
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      style={[block ? { alignSelf: "stretch" } : { alignSelf: "flex-start" }, style,
-        disabled ? { opacity: 0.5 } : null]}
+      hitSlop={hitSlop(metrics.height + theme.edge.rest, theme.touch.tapMin)}
+      style={[
+        block ? { alignSelf: "stretch" } : { alignSelf: "flex-start" },
+        style,
+        disabled ? { opacity: DISABLED_OPACITY } : null,
+      ]}
     >
       <InkEdge
         raised={raised}
         budgeted={raised}
-        radius={theme.radius.md}
+        radius={metrics.radius}
         edge={theme.edgeCompact}
-        state={edgeStateFor("native", { pressed })}
-        contentStyle={{ overflow: "hidden", backgroundColor: fill }}
+        state={edgeStateFor("native", { pressed: down })}
+        contentStyle={{
+          overflow: "hidden",
+          backgroundColor: fill,
+          borderColor: raised ? theme.color.edge : theme.color.lineStrong,
+        }}
       >
-        {body}
+        <IconPaintProvider value={ink}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: metrics.gap,
+              // Border-box: the face, borders included, is the control height.
+              minHeight: metrics.height - border * 2,
+              paddingHorizontal: metrics.padX - border,
+              paddingVertical: theme.space[1],
+              backgroundColor: !raised && down ? theme.color.pressed : undefined,
+            }}
+          >
+            {loading ? <InkSpinner label="" size={iconSize - 2} /> : renderIconSlot(icon, iconSize)}
+            <Text style={[label.style, { flexShrink: 1, textAlign: "center" }]}>{children}</Text>
+          </View>
+        </IconPaintProvider>
       </InkEdge>
     </Pressable>
   );
@@ -114,6 +159,9 @@ export function InkButton({
  *
  * The budget only counts this while it is selected, which is the point: a row
  * of twelve voices spends one edge, not twelve.
+ *
+ * Choosing one must not move its neighbours. The border thickens from one
+ * pixel to two, so the padding gives the pixel back and the box holds still.
  */
 
 export interface InkChoiceProps {
@@ -140,6 +188,12 @@ export function InkChoice({
   const [pressed, setPressed] = useState(false);
   useEdgeBudget(selected);
 
+  const pill = shape === "pill";
+  const border = selected ? theme.edge.borderWidth : theme.edge.hairlineWidth;
+  const padX = (pill ? controlPadX("sm", "pill") : controlPadX("md")) - border;
+  const padY = pill ? 0 : theme.space[3] - border;
+  const visualHeight = pill ? theme.touch.tapDense : theme.touch.tapMin;
+
   const name = inkText(theme, {
     size: "base",
     weight: theme.weight.bold,
@@ -154,9 +208,6 @@ export function InkChoice({
     color: selected ? theme.color.ink : theme.color.textTertiary,
   });
 
-  const pill = shape === "pill";
-  const visualHeight = pill ? theme.touch.tapDense : theme.touch.tapMin;
-
   return (
     <Pressable
       accessibilityRole={role === "radio" ? "radio" : "button"}
@@ -168,7 +219,7 @@ export function InkChoice({
       // Vertical only. Sideways growth makes adjacent pills steal each other's
       // taps, which is worse than a small target because it is wrong.
       hitSlop={hitSlop(visualHeight, theme.touch.tapMin)}
-      style={disabled ? { opacity: 0.5 } : undefined}
+      style={disabled ? { opacity: DISABLED_OPACITY } : undefined}
     >
       <InkEdge
         raised={selected}
@@ -179,10 +230,15 @@ export function InkChoice({
         contentStyle={{
           flexDirection: pill ? "row" : "column",
           alignItems: pill ? "center" : "flex-start",
-          gap: pill ? theme.space[2] : 3,
-          paddingVertical: pill ? 7 : 10,
-          paddingHorizontal: pill ? 15 : 13,
+          justifyContent: "center",
+          gap: pill ? theme.space[2] : 2,
+          minHeight: visualHeight,
+          paddingVertical: padY,
+          paddingHorizontal: padX,
           minWidth: pill ? 0 : 84,
+          borderColor: selected ? theme.color.edge : theme.color.lineStrong,
+          // Unchosen things answer the press too; they just answer it flat.
+          backgroundColor: pressed && !selected ? theme.color.pressed : theme.color.surface,
         }}
       >
         <Text style={name.style}>{children}</Text>
@@ -253,6 +309,10 @@ export function InkSegmented<T extends string>({
  * apps and the wrong one here: it arrives with its own border, its own
  * elevation and its own idea of an accent, and a screen that is otherwise all
  * ink edge with one Material pill in it looks like a screen with a bug.
+ *
+ * `label` is the name a screen reader hears. `children`, when given, is shown
+ * beside the switch and is part of what can be pressed — a switch whose words
+ * do nothing when tapped is a switch people tap twice.
  */
 
 export interface InkSwitchProps {
@@ -260,45 +320,79 @@ export interface InkSwitchProps {
   onChange: (checked: boolean) => void;
   label?: string;
   disabled?: boolean;
+  children?: ReactNode;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function InkSwitch({ checked, onChange, label, disabled }: InkSwitchProps) {
+const SWITCH = { width: 46, height: 28, knob: 20 } as const;
+
+export function InkSwitch({ checked, onChange, label, disabled, children, style }: InkSwitchProps) {
   const theme = useInkTheme();
-  const width = 46;
-  const knob = 20;
-  const travel = width - knob - theme.edge.borderWidth * 2 - 4;
+  const [pressed, setPressed] = useState(false);
+  const inset = theme.edge.borderWidth + 2;
+  const travel = SWITCH.width - SWITCH.knob - inset * 2;
+  const position = useRef(new Animated.Value(checked ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (!theme.animate) {
+      position.setValue(checked ? 1 : 0);
+      return;
+    }
+    const animation = springTo(position, checked ? 1 : 0, { spring: SPRING.snappy, rest: 0.001 });
+    animation.start();
+    return () => animation.stop();
+  }, [checked, theme.animate, position]);
 
   return (
     <Pressable
       accessibilityRole="switch"
-      accessibilityLabel={label}
+      accessibilityLabel={label ?? (typeof children === "string" ? children : undefined)}
       accessibilityState={{ checked, disabled }}
       disabled={disabled}
       onPress={() => onChange(!checked)}
-      hitSlop={hitSlop(28, theme.touch.tapMin)}
-      style={{
-        width,
-        height: 28,
-        justifyContent: "center",
-        paddingHorizontal: 2,
-        borderWidth: theme.edge.borderWidth,
-        borderColor: theme.color.edge,
-        borderRadius: theme.radius.pill,
-        backgroundColor: checked ? theme.color.accent : theme.color.line,
-        opacity: disabled ? 0.5 : 1,
-      }}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      hitSlop={hitSlop(SWITCH.height, theme.touch.tapMin)}
+      style={[
+        { flexDirection: "row", alignItems: "center", gap: theme.space[3], alignSelf: "flex-start" },
+        style,
+        disabled ? { opacity: DISABLED_OPACITY } : null,
+      ]}
     >
       <View
         style={{
-          width: knob,
-          height: knob,
-          borderRadius: knob / 2,
-          backgroundColor: theme.color.surface,
+          width: SWITCH.width,
+          height: SWITCH.height,
+          justifyContent: "center",
           borderWidth: theme.edge.borderWidth,
           borderColor: theme.color.edge,
-          transform: [{ translateX: checked ? travel : 0 }],
+          borderRadius: theme.radius.pill,
+          backgroundColor: checked ? theme.color.accent : theme.color.lineStrong,
         }}
-      />
+      >
+        <Animated.View
+          style={{
+            position: "absolute",
+            left: 2,
+            width: SWITCH.knob,
+            height: SWITCH.knob,
+            borderRadius: SWITCH.knob / 2,
+            backgroundColor: theme.color.surface,
+            borderWidth: theme.edge.borderWidth,
+            borderColor: theme.color.edge,
+            transform: [
+              { translateX: position.interpolate({ inputRange: [0, 1], outputRange: [0, travel] }) },
+              // The knob gives under the thumb, so the press is felt before the flip.
+              { scale: pressed ? 0.88 : 1 },
+            ],
+          }}
+        />
+      </View>
+      {typeof children === "string" ? (
+        <Text style={[inkText(theme, { size: "md" }).style, { flexShrink: 1 }]}>{children}</Text>
+      ) : (
+        children
+      )}
     </Pressable>
   );
 }

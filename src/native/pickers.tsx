@@ -23,6 +23,9 @@ import {
   type CivilTime,
   type Weekday,
 } from "../headless/calendar.js";
+import { DISABLED_OPACITY } from "../tokens/control.js";
+import { fieldFrame } from "./field.js";
+import { Glyph } from "./glyph.js";
 import { useInkTheme } from "./InkProvider.js";
 import { InkSheet } from "./overlays.js";
 import { inkText } from "./type.js";
@@ -101,9 +104,16 @@ export function InkCalendar({
           accessibilityRole="button"
           accessibilityLabel="Previous month"
           onPress={() => setView(addMonths(view, -1))}
-          style={{ width: cell, height: cell, alignItems: "center", justifyContent: "center" }}
+          style={({ pressed }) => ({
+            width: cell,
+            height: cell,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: theme.radius.md,
+            backgroundColor: pressed ? theme.color.pressed : undefined,
+          })}
         >
-          <Chevron direction="prev" colour={theme.color.textSecondary} />
+          <Glyph name="chevron-left" size={20} paint={theme.color.text} />
         </Pressable>
         {/* Paging has to announce where it landed. */}
         <Text accessibilityLiveRegion="polite" style={heading.style}>
@@ -113,15 +123,22 @@ export function InkCalendar({
           accessibilityRole="button"
           accessibilityLabel="Next month"
           onPress={() => setView(addMonths(view, 1))}
-          style={{ width: cell, height: cell, alignItems: "center", justifyContent: "center" }}
+          style={({ pressed }) => ({
+            width: cell,
+            height: cell,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: theme.radius.md,
+            backgroundColor: pressed ? theme.color.pressed : undefined,
+          })}
         >
-          <Chevron direction="next" colour={theme.color.textSecondary} />
+          <Glyph name="chevron-right" size={20} paint={theme.color.text} />
         </Pressable>
       </View>
 
       <View style={{ flexDirection: "row" }}>
         {weekdayOrder(weekStartsOn).map((day) => (
-          <View key={day} style={{ width: cell, alignItems: "center", paddingVertical: theme.space[1] }}>
+          <View key={day} style={{ flex: 1, alignItems: "center", paddingVertical: theme.space[1] }}>
             <Text style={weekday.style}>{DAY_NAMES[day].slice(0, 2)}</Text>
           </View>
         ))}
@@ -141,6 +158,9 @@ export function InkCalendar({
               weight: c.selected ? theme.weight.bold : theme.weight.medium,
               color: colour,
             });
+            // A range is a band behind the days, so it reads as one span; the
+            // ends are discs on it, like any other chosen day.
+            const banded = (c.inRange || c.rangeStart || c.rangeEnd) && !(c.rangeStart && c.rangeEnd);
             return (
               <Pressable
                 key={key}
@@ -150,51 +170,55 @@ export function InkCalendar({
                 disabled={c.disabled}
                 onPress={() => pick(c.date)}
                 style={{
-                  width: cell,
+                  flex: 1,
                   height: cell,
                   alignItems: "center",
                   justifyContent: "center",
-                  opacity: c.disabled ? 0.3 : 1,
-                  backgroundColor: c.selected
-                    ? theme.color.accent
-                    : c.inRange
-                      ? theme.color.accentSoft
-                      : "transparent",
-                  // Square corners through a range make it read as continuous
-                  // rather than as a row of separate selections.
-                  borderRadius: c.inRange ? 0 : theme.radius.md,
-                  borderTopRightRadius: c.rangeStart ? 0 : undefined,
-                  borderBottomRightRadius: c.rangeStart ? 0 : undefined,
-                  borderTopLeftRadius: c.rangeEnd ? 0 : undefined,
-                  borderBottomLeftRadius: c.rangeEnd ? 0 : undefined,
-                  // Today is a ring, not a fill: a fill would be
-                  // indistinguishable from the selection.
-                  borderWidth: c.isToday && !c.selected ? theme.edge.hairlineWidth : 0,
-                  borderColor: theme.color.accentLine,
+                  opacity: c.disabled ? DISABLED_OPACITY : 1,
                 }}
               >
-                <Text style={text.style}>{c.date.day}</Text>
+                {({ pressed }) => (
+                  <>
+                    {banded ? (
+                      <View
+                        style={{
+                          position: "absolute",
+                          top: 2,
+                          bottom: 2,
+                          left: c.rangeStart ? "50%" : 0,
+                          right: c.rangeEnd ? "50%" : 0,
+                          backgroundColor: theme.color.accentSoft,
+                        }}
+                      />
+                    ) : null}
+                    <View
+                      style={{
+                        width: cell - 4,
+                        height: cell - 4,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: theme.radius.md,
+                        backgroundColor: c.selected
+                          ? theme.color.accent
+                          : pressed
+                            ? theme.color.pressed
+                            : "transparent",
+                        // Today is a ring, not a fill: a fill would be
+                        // indistinguishable from the selection.
+                        borderWidth: c.isToday && !c.selected ? theme.edge.borderWidth : 0,
+                        borderColor: theme.color.accentLine,
+                      }}
+                    >
+                      <Text style={[text.style, { fontVariant: ["tabular-nums"] }]}>{c.date.day}</Text>
+                    </View>
+                  </>
+                )}
               </Pressable>
             );
           })}
         </View>
       ))}
     </View>
-  );
-}
-
-function Chevron({ direction, colour }: { direction: "prev" | "next"; colour: string }) {
-  return (
-    <View
-      style={{
-        width: 8,
-        height: 8,
-        borderLeftWidth: 2,
-        borderBottomWidth: 2,
-        borderColor: colour,
-        transform: [{ rotate: direction === "prev" ? "45deg" : "-135deg" }],
-      }}
-    />
   );
 }
 
@@ -214,6 +238,7 @@ function Field({
   label,
   text,
   empty,
+  open,
   disabled,
   onPress,
   style,
@@ -221,6 +246,7 @@ function Field({
   label: string;
   text: string;
   empty: boolean;
+  open: boolean;
   disabled?: boolean;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
@@ -236,27 +262,27 @@ function Field({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityValue={{ text: empty ? undefined : text }}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, expanded: open }}
       disabled={disabled}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           gap: theme.space[3],
           minHeight: theme.touch.tapMin,
-          paddingHorizontal: theme.space[3],
-          borderWidth: theme.edge.hairlineWidth,
-          borderColor: theme.color.lineStrong,
-          borderRadius: theme.radius.md,
-          backgroundColor: theme.color.surface,
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? DISABLED_OPACITY : 1,
         },
+        fieldFrame(theme, { focused: open }),
+        pressed ? { backgroundColor: theme.color.pressed } : null,
         style,
       ]}
     >
-      <Text style={value.style}>{text}</Text>
+      <Text numberOfLines={1} style={[value.style, { flexShrink: 1 }]}>
+        {text}
+      </Text>
+      <Glyph name="chevron-down" size={18} paint={theme.color.textSecondary} />
     </Pressable>
   );
 }
@@ -278,6 +304,7 @@ export function InkDatePicker({
         label={label}
         text={value ? format(value) : placeholder}
         empty={!value}
+        open={open}
         disabled={disabled}
         onPress={() => setOpen(true)}
         style={style}
@@ -319,6 +346,7 @@ export function InkDateRangePicker({
         label={label}
         text={text}
         empty={!value.start}
+        open={open}
         disabled={disabled}
         onPress={() => setOpen(true)}
         style={style}
@@ -361,6 +389,9 @@ export function InkTimePicker({
   const theme = useInkTheme();
   const [open, setOpen] = useState(false);
   const options = useMemo(() => timeOptions(step), [step]);
+  const selectedIndex = value
+    ? Math.max(0, options.findIndex((t) => t.hour === value.hour && t.minute === value.minute))
+    : 0;
 
   return (
     <>
@@ -368,12 +399,17 @@ export function InkTimePicker({
         label={label}
         text={value ? formatTime(value, hour12) : "Pick a time"}
         empty={!value}
+        open={open}
         disabled={disabled}
         onPress={() => setOpen(true)}
         style={style}
       />
-      <InkSheet open={open} onClose={() => setOpen(false)} title={label}>
-        <ScrollView style={{ maxHeight: 320 }}>
+      <InkSheet open={open} onClose={() => setOpen(false)} title={label} scroll={false}>
+        <ScrollView
+          style={{ maxHeight: 360, flexShrink: 1 }}
+          // Opens on the current time, a few rows down, rather than on midnight.
+          contentOffset={{ x: 0, y: Math.max(0, selectedIndex - 3) * theme.touch.tapMin }}
+        >
           {options.map((time) => {
             const text = formatTime(time, hour12);
             const on = !!value && value.hour === time.hour && value.minute === time.minute;
@@ -386,13 +422,15 @@ export function InkTimePicker({
                   onChange(time);
                   setOpen(false);
                 }}
-                style={{
-                  minHeight: theme.touch.tapMin,
-                  justifyContent: "center",
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  height: theme.touch.tapMin,
                   paddingHorizontal: theme.space[3],
                   borderRadius: theme.radius.md,
-                  backgroundColor: on ? theme.color.accentSoft : "transparent",
-                }}
+                  backgroundColor: on ? theme.color.accentSoft : pressed ? theme.color.pressed : "transparent",
+                })}
               >
                 <Text
                   style={
@@ -405,6 +443,7 @@ export function InkTimePicker({
                 >
                   {text}
                 </Text>
+                {on ? <Glyph name="check" size={18} paint={theme.color.accentLine} /> : null}
               </Pressable>
             );
           })}

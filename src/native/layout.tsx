@@ -4,6 +4,8 @@
 import { useMemo, type ReactNode } from "react";
 import { ariaSort, nextSort, sortRows, type SortState } from "../headless/table.js";
 import { Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { hitSlop } from "../core/reach.js";
+import { DISABLED_OPACITY } from "../tokens/control.js";
 import type { SpaceStep } from "../tokens/space.js";
 import { useInkTheme } from "./InkProvider.js";
 import { inkText } from "./type.js";
@@ -146,9 +148,9 @@ export function InkTabs<T extends string>({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      accessibilityRole="none"
+      accessibilityRole="tablist"
       accessibilityLabel={label}
-      style={[{ borderBottomWidth: 1, borderColor: theme.color.line }, style]}
+      style={[{ flexGrow: 0, borderBottomWidth: theme.edge.hairlineWidth, borderColor: theme.color.line }, style]}
       contentContainerStyle={{ flexDirection: "row", gap: theme.space[1] }}
     >
       {tabs.map((tab) => {
@@ -161,18 +163,21 @@ export function InkTabs<T extends string>({
         return (
           <Pressable
             key={tab.value}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityState={{ selected: on, disabled: tab.disabled }}
             disabled={tab.disabled}
             onPress={() => onChange(tab.value)}
-            style={{
+            style={({ pressed }) => ({
               minHeight: theme.touch.tapMin,
               justifyContent: "center",
               paddingHorizontal: theme.space[4],
+              borderTopLeftRadius: theme.radius.sm,
+              borderTopRightRadius: theme.radius.sm,
               borderBottomWidth: theme.edge.borderWidth,
               borderColor: on ? theme.color.accentLine : "transparent",
-              opacity: tab.disabled ? 0.5 : 1,
-            }}
+              backgroundColor: pressed && !on ? theme.color.pressed : undefined,
+              opacity: tab.disabled ? DISABLED_OPACITY : 1,
+            })}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: theme.space[2] }}>
               <Text style={text.style}>{tab.label}</Text>
@@ -223,8 +228,13 @@ export function InkBreadcrumb({
               &hellip;
             </Text>
           ) : item.onPress && i < shown.length - 1 ? (
-            <Pressable accessibilityRole="link" onPress={item.onPress}>
-              <Text style={base.style}>{item.label}</Text>
+            <Pressable
+              accessibilityRole="link"
+              onPress={item.onPress}
+              hitSlop={hitSlop(base.style.lineHeight ?? 18, theme.touch.tapMin)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              <Text style={[base.style, { textDecorationLine: "underline" }]}>{item.label}</Text>
             </Pressable>
           ) : (
             <Text style={current.style}>{item.label}</Text>

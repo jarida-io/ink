@@ -5,6 +5,7 @@
  */
 import type { ReactNode } from "react";
 import { Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { WaveDots } from "./feedback.js";
 import { useInkTheme } from "./InkProvider.js";
 import { inkText } from "./type.js";
 
@@ -169,12 +170,6 @@ export function InkBubbleGroup({
  */
 export function InkTyping({ author, style }: { author?: string; style?: StyleProp<ViewStyle> }) {
   const theme = useInkTheme();
-  const dot: ViewStyle = {
-    width: 6,
-    height: 6,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.color.textTertiary,
-  };
   return (
     <View style={[{ alignSelf: "flex-start", gap: 2 }, style]}>
       {author ? (
@@ -188,10 +183,11 @@ export function InkTyping({ author, style }: { author?: string; style?: StylePro
         </Text>
       ) : null}
       <View
+        accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={{
           flexDirection: "row",
-          gap: 4,
+          alignSelf: "flex-start",
           paddingVertical: theme.space[3],
           paddingHorizontal: theme.space[4],
           borderRadius: theme.radius.xl,
@@ -201,9 +197,7 @@ export function InkTyping({ author, style }: { author?: string; style?: StylePro
           borderColor: theme.color.lineStrong,
         }}
       >
-        <View style={dot} />
-        <View style={dot} />
-        <View style={dot} />
+        <WaveDots size={6} gap={4} colour={theme.color.textTertiary} />
       </View>
     </View>
   );

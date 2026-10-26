@@ -4,6 +4,7 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { edgeStateFor } from "../core/edge.js";
+import { DISABLED_OPACITY } from "../tokens/control.js";
 import { InkEdge } from "./InkEdge.js";
 import { useInkTheme } from "./InkProvider.js";
 import { inkText } from "./type.js";
@@ -67,12 +68,13 @@ export function InkCard({
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      style={[style, disabled ? { opacity: 0.5 } : null]}
+      style={[style, disabled ? { opacity: DISABLED_OPACITY } : null]}
     >
       <InkEdge
         raised={raised}
         state={edgeStateFor("native", { pressed })}
-        contentStyle={padding}
+        // A flat card has no plate to press onto, so it answers with a wash.
+        contentStyle={[padding, !raised && pressed ? { backgroundColor: theme.color.pressed } : null]}
       >
         {children}
       </InkEdge>
@@ -112,9 +114,10 @@ export function InkGroup({ title, meta, raised = true, style, children }: InkGro
           alignItems: "center",
           justifyContent: "space-between",
           gap: theme.space[3],
+          minHeight: theme.rowHeight.lg,
           paddingVertical: theme.space[3],
           paddingHorizontal: theme.space[4],
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.edge.hairlineWidth,
           borderColor: theme.color.line,
         }}
       >
@@ -161,7 +164,7 @@ export function InkRow({ label, description, children, divided = true }: InkRowP
         minHeight: theme.touch.tapMin,
         paddingVertical: theme.space[3],
         paddingHorizontal: theme.space[4],
-        borderTopWidth: divided ? 1 : 0,
+        borderTopWidth: divided ? theme.edge.hairlineWidth : 0,
         borderColor: theme.color.line,
       }}
     >
