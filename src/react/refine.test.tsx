@@ -142,6 +142,27 @@ describe("overlays", () => {
     expect(new Set(ids).size).toBe(2);
   });
 
+  it("scrolls a dialog's words but never its answers", () => {
+    const { container } = render(
+      <InkDialog open onClose={() => {}} title="Forget the kitchen?" actions={<InkButton>Forget</InkButton>}>
+        <p>Long</p>
+      </InkDialog>,
+    );
+    const body = container.querySelector(".ink-dialog__body") as HTMLElement;
+    const actions = container.querySelector(".ink-dialog__actions")!;
+    expect(body.contains(screen.getByText("Long"))).toBe(true);
+    expect(body.contains(actions)).toBe(false);
+
+    // jsdom lays nothing out, so the overflow is stated rather than measured.
+    Object.defineProperty(body, "clientHeight", { configurable: true, value: 300 });
+    Object.defineProperty(body, "scrollHeight", { configurable: true, value: 800 });
+    fireEvent.scroll(body);
+    expect(body.dataset.below).toBe("true");
+    body.scrollTop = 500;
+    fireEvent.scroll(body);
+    expect(body.dataset.below).toBeUndefined();
+  });
+
   it("describes a sheet and refuses Escape when it must be answered", () => {
     const onClose = vi.fn();
     const { container } = render(

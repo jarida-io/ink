@@ -1374,17 +1374,32 @@
 .ink-dialog::backdrop, .ink-sheet::backdrop { background: var(--color-scrim, rgba(23, 22, 22, 0.42)); }
 
 .ink-dialog { margin: auto; }
+/* Kept clear of every edge and the notch by the same margin native keeps. */
 .ink-dialog__panel {
-  width: min(480px, calc(100vw - var(--space-8)));
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 2 * var(--space-6) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  max-height: calc(100vh - 2 * var(--space-6) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - 2 * var(--space-6) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--pad-lg);
+  overflow: hidden;
   border: var(--ink-border-width) solid var(--color-text);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-ink);
 }
+.ink-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--pad-lg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-bottom: 1px solid transparent;
+}
+.ink-dialog__body--answered { padding-bottom: var(--space-3); }
+.ink-dialog__body[data-below] { border-bottom-color: var(--color-border); }
 .ink-dialog__title, .ink-sheet__title {
   margin: 0;
   font-family: var(--font-display);
@@ -1395,30 +1410,74 @@
   color: var(--color-text);
 }
 /* The confirming action goes last, where the eye finishes. */
-.ink-dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
+.ink-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--pad-lg) var(--pad-lg);
+}
 
-.ink-sheet--bottom { margin: auto auto 0; width: 100%; }
+/* On a wide window a sheet the full width is a banner; it stays on the bottom
+   edge, centred, clear of a landscape notch. */
+.ink-sheet--bottom {
+  margin: auto auto 0;
+  width: min(640px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+}
 .ink-sheet--right { margin: 0 0 0 auto; height: 100%; }
 .ink-sheet--left { margin: 0 auto 0 0; height: 100%; }
+/* The gutter sits on the head and the body, not the panel, so the hairline
+   under the head runs edge to edge. */
 .ink-sheet__panel {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  max-height: calc(100dvh - var(--space-6));
-  padding: var(--space-5);
-  padding-bottom: max(var(--space-5), env(safe-area-inset-bottom, 0px));
+  max-height: calc(100vh - var(--space-6) - env(safe-area-inset-top, 0px));
+  max-height: calc(100dvh - var(--space-6) - env(safe-area-inset-top, 0px));
+  padding-top: var(--space-5);
   background: var(--color-surface);
   border: var(--ink-border-width) solid var(--color-text);
 }
-.ink-sheet__head { display: flex; flex-direction: column; gap: var(--space-2); }
+.ink-sheet__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-5) var(--space-3);
+}
 .ink-sheet__description { margin: 0; font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-text-secondary); }
-.ink-sheet__body { display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; }
+.ink-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  padding: var(--space-1) var(--space-5) max(var(--space-5), calc(env(safe-area-inset-bottom, 0px) + var(--space-2)));
+  border-top: 1px solid transparent;
+}
 /* The body scrolls once the panel reaches the viewport; the title stays. */
 .ink-sheet__body[data-scroll] { overflow-y: auto; overscroll-behavior: contain; }
+.ink-sheet__body[data-above] { border-top-color: var(--color-border); }
 .ink-sheet--bottom .ink-sheet__panel { border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; border-bottom: none; }
-.ink-sheet--right .ink-sheet__panel { width: min(420px, 92vw); height: 100%; border-radius: var(--radius-2xl) 0 0 var(--radius-2xl); border-right: none; }
-.ink-sheet--left .ink-sheet__panel { width: min(420px, 92vw); height: 100%; border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0; border-left: none; }
+.ink-sheet--right .ink-sheet__panel, .ink-sheet--left .ink-sheet__panel {
+  height: 100%;
+  max-height: none;
+  padding-top: calc(var(--space-6) + env(safe-area-inset-top, 0px));
+}
+.ink-sheet--right .ink-sheet__body, .ink-sheet--left .ink-sheet__body {
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
+/* The edge a side sheet meets is the one that carries a landscape notch. */
+.ink-sheet--right .ink-sheet__panel {
+  width: min(calc(400px + env(safe-area-inset-right, 0px)), 88vw);
+  border-radius: var(--radius-2xl) 0 0 var(--radius-2xl);
+  border-right: none;
+}
+.ink-sheet--right :is(.ink-sheet__head, .ink-sheet__body) { padding-right: calc(var(--space-5) + env(safe-area-inset-right, 0px)); }
+.ink-sheet--left .ink-sheet__panel {
+  width: min(calc(400px + env(safe-area-inset-left, 0px)), 88vw);
+  border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0;
+  border-left: none;
+}
+.ink-sheet--left :is(.ink-sheet__head, .ink-sheet__body) { padding-left: calc(var(--space-5) + env(safe-area-inset-left, 0px)); }
 
 @media (prefers-reduced-motion: reduce) {
   .ink-spinner { animation-duration: 2s; }
@@ -2695,7 +2754,7 @@ button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); o
 .ink-drawer { position: fixed; inset: 0; z-index: 70; display: flex; pointer-events: none; visibility: hidden; transition: visibility 0s var(--dur-base); }
 .ink-drawer[data-open] { pointer-events: auto; visibility: visible; transition: visibility 0s; }
 .ink-drawer--end { justify-content: flex-end; }
-.ink-drawer--bottom { align-items: flex-end; }
+.ink-drawer--bottom { align-items: flex-end; justify-content: center; }
 
 .ink-drawer__scrim {
   position: absolute; inset: 0;
@@ -2706,20 +2765,44 @@ button.ink-stepper__body:focus-visible { outline: 2px solid var(--focus-ring); o
 }
 .ink-drawer[data-open] .ink-drawer__scrim { opacity: 1; }
 
+/* Each edge pays for the safe area it meets: the notch on the side a drawer
+   opens from, the home indicator below. */
 .ink-drawer__panel {
   position: relative;
+  box-sizing: border-box;
   display: flex; flex-direction: column; gap: var(--space-4);
   padding: var(--pad-lg);
-  padding-top: max(var(--pad-lg), env(safe-area-inset-top, 0px));
+  padding-top: calc(var(--pad-lg) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--pad-lg) + env(safe-area-inset-bottom, 0px));
   background: var(--color-surface);
   border: var(--ink-border-width) solid var(--color-text);
   overflow-y: auto;
+  overscroll-behavior: contain;
   transition: transform var(--dur-slow) var(--ink-ease);
 }
-.ink-drawer--start .ink-drawer__panel { width: min(360px, 86vw); height: 100%; border-left: none; border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0; transform: translateX(-100%); }
-.ink-drawer--end .ink-drawer__panel { width: min(360px, 86vw); height: 100%; border-right: none; border-radius: var(--radius-2xl) 0 0 var(--radius-2xl); transform: translateX(100%); }
-.ink-drawer--bottom .ink-drawer__panel { width: 100%; max-height: 86vh; border-bottom: none; border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; transform: translateY(100%); }
-.ink-drawer--full .ink-drawer__panel { width: 100%; max-width: none; border-radius: 0; border: none; }
+.ink-drawer--start .ink-drawer__panel {
+  width: min(calc(360px + env(safe-area-inset-left, 0px)), 88vw); height: 100%;
+  padding-left: calc(var(--pad-lg) + env(safe-area-inset-left, 0px));
+  border-left: none; border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0; transform: translateX(-100%);
+}
+.ink-drawer--end .ink-drawer__panel {
+  width: min(calc(360px + env(safe-area-inset-right, 0px)), 88vw); height: 100%;
+  padding-right: calc(var(--pad-lg) + env(safe-area-inset-right, 0px));
+  border-right: none; border-radius: var(--radius-2xl) 0 0 var(--radius-2xl); transform: translateX(100%);
+}
+.ink-drawer--bottom .ink-drawer__panel {
+  width: min(640px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  max-height: calc(100vh - var(--space-6) - env(safe-area-inset-top, 0px));
+  max-height: calc(100dvh - var(--space-6) - env(safe-area-inset-top, 0px));
+  padding-top: var(--pad-lg);
+  padding-bottom: max(var(--pad-lg), calc(env(safe-area-inset-bottom, 0px) + var(--space-2)));
+  border-bottom: none; border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; transform: translateY(100%);
+}
+.ink-drawer--full .ink-drawer__panel {
+  width: 100%; max-width: none; border-radius: 0; border: none;
+  padding-left: calc(var(--pad-lg) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--pad-lg) + env(safe-area-inset-right, 0px));
+}
 .ink-drawer[data-open] .ink-drawer__panel { transform: none; }
 
 /* ═══ Backdrop, avatar group, tooltip ══════════════════════════════════════ */

@@ -6,10 +6,37 @@
  * a popover needs a portal and a positioning engine that React Native does not
  * have. `InkSheet` covers what a menu was being used for, with one behaviour.
  */
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * Whether a scroller has content hidden past either edge. The hairline that
+ * separates a pinned header or footer is drawn only then, as native draws it.
+ */
+function useScrollEdges(open: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ above: false, below: false });
+  const measure = useCallback(() => {
+    const node = ref.current;
+    if (!node) return;
+    const above = node.scrollTop > 0;
+    const below = node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+    setEdges((e) => (e.above === above && e.below === below ? e : { above, below }));
+  }, []);
+  useEffect(() => {
+    const node = ref.current;
+    if (!open || !node || typeof ResizeObserver === "undefined") return;
+    // The children too: content that grows inside a capped panel leaves the
+    // scroller's own size unchanged.
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    for (const child of Array.from(node.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, [open, measure]);
+  return { ref, onScroll: measure, above: edges.above || undefined, below: edges.below || undefined };
 }
 
 /* ── Dialog ────────────────────────────────────────────────────────────────
@@ -49,6 +76,7 @@ export function InkDialog({
   const ref = useRef<HTMLDialogElement>(null);
   // Per instance: two dialogs sharing one id label each other.
   const titleId = useId();
+  const edges = useScrollEdges(open);
 
   useEffect(() => {
     const node = ref.current;
@@ -76,11 +104,20 @@ export function InkDialog({
       }}
     >
       <div className="ink-dialog__panel">
-        <h2 id={titleId} className="ink-dialog__title">
-          {title}
-        </h2>
-        {description ? <p className="ink-prose">{description}</p> : null}
-        {children}
+        {/* Past the viewport's height the words scroll and the answers stay:
+            a dialog whose buttons are below the fold cannot be answered. */}
+        <div
+          ref={edges.ref}
+          onScroll={edges.onScroll}
+          className={cx("ink-dialog__body", !!actions && "ink-dialog__body--answered")}
+          data-below={edges.below}
+        >
+          <h2 id={titleId} className="ink-dialog__title">
+            {title}
+          </h2>
+          {description ? <p className="ink-prose">{description}</p> : null}
+          {children}
+        </div>
         {actions ? <div className="ink-dialog__actions">{actions}</div> : null}
       </div>
     </dialog>
@@ -124,6 +161,7 @@ export function InkSheet({
 }: InkSheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const edges = useScrollEdges(open && scroll);
 
   useEffect(() => {
     const node = ref.current;
@@ -152,7 +190,13 @@ export function InkSheet({
           </h2>
           {description ? <p className="ink-sheet__description">{description}</p> : null}
         </div>
-        <div className="ink-sheet__body" data-scroll={scroll || undefined}>
+        <div
+          ref={edges.ref}
+          onScroll={scroll ? edges.onScroll : undefined}
+          className="ink-sheet__body"
+          data-scroll={scroll || undefined}
+          data-above={edges.above}
+        >
           {children}
         </div>
       </div>
