@@ -28,7 +28,7 @@ import { InkEdge } from "./InkEdge.js";
 import { useInkInsets, useInkTheme } from "./InkProvider.js";
 import { InkAvatar, InkSpinner } from "./feedback.js";
 import { springTo } from "./motion.js";
-import { Overlay } from "./overlay.js";
+import { OVERLAY_WIDTH, Overlay } from "./overlay.js";
 import { inkText } from "./type.js";
 
 /* ── Chip ──────────────────────────────────────────────────────────────────
@@ -1347,6 +1347,11 @@ export function InkDrawer({
   const bottom = side === "bottom";
   const full = size === "full";
   const radius = full ? 0 : theme.radius["2xl"];
+  const gutter = theme.space[5];
+  // Only the edge it meets carries the landscape notch; a bottom drawer is
+  // already kept clear of it by the frame.
+  const left = !bottom && (full || side === "start") ? insets.left : 0;
+  const right = !bottom && (full || side === "end") ? insets.right : 0;
 
   return (
     <Overlay
@@ -1371,11 +1376,12 @@ export function InkDrawer({
       }
       panelStyle={[
         {
-          width: bottom ? undefined : full ? "100%" : 340,
-          maxWidth: full ? "100%" : undefined,
-          paddingHorizontal: theme.space[5],
-          paddingTop: bottom ? 0 : insets.top + theme.space[5],
-          paddingBottom: bottom ? undefined : insets.bottom + theme.space[5],
+          // Keys left out rather than set undefined: an undefined here cancels
+          // the shell's own width and cap, and 360 ran off a 320 phone.
+          ...(bottom ? null : { width: full ? ("100%" as const) : OVERLAY_WIDTH.drawer + left + right }),
+          ...(full ? { maxWidth: "100%" as const } : null),
+          paddingTop: bottom ? 0 : insets.top + gutter,
+          paddingBottom: bottom ? undefined : insets.bottom + gutter,
           borderWidth: full ? 0 : theme.edge.borderWidth,
           borderColor: theme.color.edge,
           backgroundColor: theme.color.surface,
@@ -1390,9 +1396,16 @@ export function InkDrawer({
         style,
       ]}
     >
-      <View accessibilityLabel={label} style={{ gap: theme.space[4], flexShrink: 1 }}>
+      {/* The web drawer scrolls its panel the same way. */}
+      <ScrollView
+        accessibilityLabel={label}
+        keyboardShouldPersistTaps="handled"
+        alwaysBounceVertical={false}
+        style={{ flexGrow: 0, flexShrink: 1 }}
+        contentContainerStyle={{ gap: theme.space[4], paddingLeft: gutter + left, paddingRight: gutter + right }}
+      >
         {children}
-      </View>
+      </ScrollView>
     </Overlay>
   );
 }

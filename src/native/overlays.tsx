@@ -12,7 +12,7 @@ import { ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-na
 import { InkBudget } from "../shared/budget.js";
 import { InkEdge } from "./InkEdge.js";
 import { useInkInsets, useInkTheme } from "./InkProvider.js";
-import { Overlay } from "./overlay.js";
+import { EdgeLine, OVERLAY_WIDTH, Overlay, useScrollEdges } from "./overlay.js";
 import { inkText, slantTransform } from "./type.js";
 
 export interface InkDialogProps {
@@ -39,6 +39,7 @@ export function InkDialog({
 }: InkDialogProps) {
   const theme = useInkTheme();
   const titleRef = useRef<ComponentRef<typeof Text>>(null);
+  const edges = useScrollEdges();
   const heading = inkText(theme, {
     role: "display",
     size: "xl",
@@ -48,6 +49,7 @@ export function InkDialog({
     leading: "tight",
   });
   const body = inkText(theme, { size: "base", color: theme.color.textSecondary });
+  const pad = theme.space[6];
 
   return (
     <Overlay
@@ -62,29 +64,45 @@ export function InkDialog({
         <InkEdge
           budgeted={false}
           radius={theme.radius.lg}
-          contentStyle={[{ gap: theme.space[3], padding: theme.space[6] }, style]}
+          style={{ flexShrink: 1 }}
+          contentStyle={[{ flexShrink: 1, overflow: "hidden" }, style]}
         >
-          <Text
-            ref={titleRef}
-            accessibilityRole="header"
-            style={[heading.style, heading.slant ? { transform: slantTransform(heading.slant) } : null]}
+          {/* Past the screen's height the words scroll and the answers stay:
+              a dialog whose buttons are below the fold cannot be answered. */}
+          <ScrollView
+            {...edges.scrollProps}
+            alwaysBounceVertical={false}
+            keyboardShouldPersistTaps="handled"
+            style={{ flexGrow: 0, flexShrink: 1 }}
+            contentContainerStyle={{ gap: theme.space[3], padding: pad, paddingBottom: actions ? theme.space[3] : pad }}
           >
-            {title}
-          </Text>
-          {typeof description === "string" ? <Text style={body.style}>{description}</Text> : description}
-          {children}
-          {actions ? (
-            <View
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                justifyContent: "flex-end",
-                gap: theme.space[3],
-                marginTop: theme.space[3],
-              }}
+            <Text
+              ref={titleRef}
+              accessibilityRole="header"
+              style={[heading.style, heading.slant ? { transform: slantTransform(heading.slant) } : null]}
             >
-              {actions}
-            </View>
+              {title}
+            </Text>
+            {typeof description === "string" ? <Text style={body.style}>{description}</Text> : description}
+            {children}
+          </ScrollView>
+          {actions ? (
+            <>
+              <EdgeLine shown={edges.below} />
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
+                  gap: theme.space[3],
+                  paddingTop: theme.space[3],
+                  paddingHorizontal: pad,
+                  paddingBottom: pad,
+                }}
+              >
+                {actions}
+              </View>
+            </>
           ) : null}
         </InkEdge>
       </InkBudget>
@@ -131,6 +149,7 @@ export function InkSheet({
   const theme = useInkTheme();
   const insets = useInkInsets();
   const titleRef = useRef<ComponentRef<typeof Text>>(null);
+  const edges = useScrollEdges();
   const heading = inkText(theme, {
     role: "display",
     size: "xl",
@@ -144,15 +163,22 @@ export function InkSheet({
   const bottom = side === "bottom";
   const radius = theme.radius["2xl"];
   const gutter = theme.space[5];
+  // A side sheet meets one edge of the screen, and in landscape that edge has the notch.
+  const sides: ViewStyle = {
+    paddingLeft: gutter + (side === "left" ? insets.left : 0),
+    paddingRight: gutter + (side === "right" ? insets.right : 0),
+  };
 
   const header = (
     <View
-      style={{
-        gap: theme.space[2],
-        paddingTop: bottom ? theme.space[2] : insets.top + theme.space[6],
-        paddingBottom: theme.space[4],
-        paddingHorizontal: gutter,
-      }}
+      style={[
+        {
+          gap: theme.space[2],
+          paddingTop: bottom ? theme.space[2] : insets.top + theme.space[6],
+          paddingBottom: theme.space[4],
+        },
+        sides,
+      ]}
     >
       {bottom && dismissible ? (
         <View
@@ -177,7 +203,7 @@ export function InkSheet({
     </View>
   );
 
-  const content: ViewStyle = { gap: theme.space[4], paddingHorizontal: gutter };
+  const content: ViewStyle = { gap: theme.space[4], ...sides };
 
   return (
     <Overlay
@@ -189,7 +215,8 @@ export function InkSheet({
       header={header}
       panelStyle={[
         {
-          width: bottom ? undefined : 380,
+          // Left out for a bottom sheet, whose width and cap the shell sets.
+          ...(bottom ? null : { width: OVERLAY_WIDTH.side + (side === "left" ? insets.left : insets.right) }),
           paddingBottom: bottom ? undefined : insets.bottom + theme.space[6],
           borderWidth: theme.edge.borderWidth,
           borderColor: theme.color.edge,
@@ -207,14 +234,18 @@ export function InkSheet({
       ]}
     >
       {scroll ? (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          alwaysBounceVertical={false}
-          style={{ flexShrink: 1 }}
-          contentContainerStyle={content}
-        >
-          {children}
-        </ScrollView>
+        <>
+          <EdgeLine shown={edges.above} />
+          <ScrollView
+            {...edges.scrollProps}
+            keyboardShouldPersistTaps="handled"
+            alwaysBounceVertical={false}
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={content}
+          >
+            {children}
+          </ScrollView>
+        </>
       ) : (
         <View style={[content, { flexShrink: 1 }]}>{children}</View>
       )}

@@ -21,6 +21,8 @@ import {
   View,
   useWindowDimensions,
   type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -46,6 +48,54 @@ export interface OverlayProps {
 
 const FILL: ViewStyle = { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 };
 
+/** The widths the web stylesheet uses too, so a panel is the same size on both. */
+export const OVERLAY_WIDTH = { dialog: 480, sheet: 640, side: 400, drawer: 360, backdrop: 320 } as const;
+
+/**
+ * Whether a scroller is hiding content past either edge. Feeds the hairline
+ * that appears only when there is something under it, rather than a divider
+ * drawn whether or not anything scrolls.
+ */
+export function useScrollEdges() {
+  const box = useRef({ view: 0, content: 0, offset: 0 }).current;
+  const [above, setAbove] = useState(false);
+  const [below, setBelow] = useState(false);
+  const update = () => {
+    setAbove(box.offset > 1);
+    setBelow(box.offset + box.view < box.content - 1);
+  };
+  return {
+    above,
+    below,
+    scrollProps: {
+      scrollEventThrottle: 16,
+      onLayout: (e: LayoutChangeEvent) => {
+        box.view = e.nativeEvent.layout.height;
+        update();
+      },
+      onContentSizeChange: (_width: number, height: number) => {
+        box.content = height;
+        update();
+      },
+      onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        box.offset = e.nativeEvent.contentOffset.y;
+        update();
+      },
+    },
+  };
+}
+
+/** Always laid out, so the content does not jump when it appears. */
+export function EdgeLine({ shown }: { shown: boolean }) {
+  const theme = useInkTheme();
+  return (
+    <View
+      pointerEvents="none"
+      style={{ height: theme.edge.hairlineWidth, backgroundColor: shown ? theme.color.line : "transparent" }}
+    />
+  );
+}
+
 export function Overlay({
   open,
   onDismiss,
@@ -61,7 +111,8 @@ export function Overlay({
   const screen = useWindowDimensions();
   const [mounted, setMounted] = useState(open);
   const [size, setSize] = useState(0);
-  const [keyboard, setKeyboard] = useState(0);
+  const [frameHeight, setFrameHeight] = useState(0);
+  const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
   const progress = useRef(new Animated.Value(0)).current;
   const fling = useRef(0);
   const edge = placement !== "center";
@@ -103,15 +154,15 @@ export function Overlay({
     // iOS announces the keyboard before it moves, so the panel can move with it.
     // Android only says so afterwards.
     const ios = Platform.OS === "ios";
-    const follow = (height: number, duration?: number) => {
+    const follow = (top: number | null, duration?: number) => {
       if (ios) LayoutAnimation.configureNext({ duration: duration || 250, update: { type: "keyboard" } });
-      setKeyboard(height);
+      setKeyboardTop(top);
     };
     const show = Keyboard.addListener(ios ? "keyboardWillShow" : "keyboardDidShow", (e) =>
-      follow(e.endCoordinates.height, e.duration),
+      follow(e.endCoordinates.screenY, e.duration),
     );
     const hide = Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", (e) =>
-      follow(0, e.duration),
+      follow(null, e.duration),
     );
     return () => {
       show.remove();
@@ -176,6 +227,11 @@ export function Overlay({
     });
   };
 
+  // How much of this frame the keyboard covers, rather than how tall it is.
+  // An Android window the system has already shrunk is covered by nothing, and
+  // lifting it by the keyboard's height as well put the panel twice as high.
+  const keyboard = keyboardTop == null ? 0 : Math.max(0, Math.round((frameHeight || screen.height) - keyboardTop));
+
   const travel = vertical ? reach : placement === "start" ? -reach : reach;
   const motion: ViewStyle | Record<string, unknown> = !theme.animate
     ? { opacity: progress }
@@ -205,10 +261,18 @@ export function Overlay({
           justifyContent: "center",
           paddingTop: insets.top + theme.space[6],
           paddingBottom: Math.max(insets.bottom, keyboard) + theme.space[6],
-          paddingHorizontal: theme.space[6],
+          paddingLeft: insets.left + theme.space[6],
+          paddingRight: insets.right + theme.space[6],
         }
       : placement === "bottom"
-        ? { justifyContent: "flex-end", paddingTop: insets.top + theme.space[6], paddingBottom: keyboard }
+        ? {
+            justifyContent: "flex-end",
+            paddingTop: insets.top + theme.space[6],
+            paddingBottom: keyboard,
+            // Clear of a landscape notch; a side panel pads its own content instead.
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          }
         : { alignItems: placement === "start" ? "flex-start" : "flex-end" };
 
   const measure = (e: LayoutChangeEvent) => {
@@ -240,14 +304,21 @@ export function Overlay({
       />
       {/* For a thumb. The announced ways out are the escape gesture and back. */}
       <Pressable accessible={false} disabled={!onDismiss} onPress={onDismiss} style={FILL} />
-      <View pointerEvents="box-none" style={[{ flex: 1 }, frame]}>
+      <View
+        pointerEvents="box-none"
+        onLayout={(e) => setFrameHeight(Math.round(e.nativeEvent.layout.height))}
+        style={[{ flex: 1 }, frame]}
+      >
         <Animated.View
           accessibilityViewIsModal
           onAccessibilityEscape={onDismiss}
           onLayout={edge ? measure : undefined}
           style={[
             { flexShrink: 1 },
-            placement === "center" ? { width: "100%", maxWidth: 480 } : null,
+            placement === "center" ? { width: "100%", maxWidth: OVERLAY_WIDTH.dialog } : null,
+            // On a tablet or a phone on its side, a sheet the width of the
+            // screen is a banner; it stays on the bottom edge, centred.
+            vertical ? { width: "100%", maxWidth: OVERLAY_WIDTH.sheet, alignSelf: "center" } : null,
             placement === "start" || placement === "end" ? { flex: 1, maxWidth: "88%" } : null,
             panelStyle,
             // Above the home indicator at rest; with the keyboard up that edge

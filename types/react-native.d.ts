@@ -222,6 +222,16 @@ declare module "react-native" {
     nativeEvent: { layout: { x: number; y: number; width: number; height: number } };
   }
 
+  export interface NativeSyntheticEvent<T> {
+    nativeEvent: T;
+  }
+
+  export interface NativeScrollEvent {
+    contentOffset: { x: number; y: number };
+    contentSize: { width: number; height: number };
+    layoutMeasurement: { width: number; height: number };
+  }
+
   export interface TextInputProps extends AccessibilityProps {
     value?: string;
     onChangeText?: (text: string) => void;
@@ -274,6 +284,9 @@ declare module "react-native" {
     keyboardShouldPersistTaps?: "always" | "never" | "handled";
     alwaysBounceVertical?: boolean;
     contentOffset?: { x: number; y: number };
+    onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    onContentSizeChange?: (width: number, height: number) => void;
+    scrollEventThrottle?: number;
   }
 
   export interface ImageProps {
