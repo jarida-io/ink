@@ -1,6 +1,6 @@
 {
   "name": "@jarida/ink",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A design library with a printed edge and a glass bar. Framework-agnostic tokens and behaviour, React and React Native bindings, and plain CSS for everything else.",
   "keywords": [
     "design-system",

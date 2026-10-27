@@ -1,6 +1,31 @@
 # Changelog
 
-## 1.1.0 — unreleased
+## 1.1.1 — unreleased
+
+Every overlay measured against the viewport it opens in: a 320 phone, a phone on
+its side, a tablet and a desktop window, in light and dark. No prop changed.
+
+### Things that were wrong
+
+- **A dialog taller than the screen ran off both ends**, its buttons with it. The
+  words now scroll and the answers stay pinned below them, with a hairline
+  between the two only while there is more to read.
+- **A bottom sheet spanned a tablet or a landscape phone** edge to edge, as a
+  banner. Sheets and the bottom drawer stop at 640 and sit centred.
+- **The native drawer was 340 wide whatever the screen**, so on a 320 phone it
+  ran off the edge. It is 360, capped at 88% like every side panel, and its body
+  scrolls instead of being cut off.
+- **The web side sheet stopped 24px short of the bottom**: the bottom sheet's
+  height cap applied to it too. Side sheets run the full height, 400 wide.
+- **Overlays ignored a landscape notch.** A side sheet or drawer pads the edge it
+  opens from, and a dialog or bottom sheet keeps clear of both.
+- **A form could be lifted twice above the keyboard on Android**, or sit behind
+  it by the navigation bar's height. The lift is now how much of the overlay the
+  keyboard covers, measured from where the keyboard starts, not its height.
+- **A sheet's header gave no sign the body had scrolled under it.** A hairline
+  appears once it has, on both platforms.
+
+## 1.1.0 — 2026-10-26
 
 Every component went through in light and dark, on a phone, against what a
 finger actually does. Nothing is renamed and no prop was removed.
